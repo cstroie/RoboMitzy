@@ -88,6 +88,7 @@ void setup() {
 
   // Initialize the analog line sensors
   SNS.init();
+
   // Calibrate
   snsCalibrate();
   // HALT
@@ -98,6 +99,13 @@ void setup() {
   Main Arduino loop
 */
 void loop() {
-  Serial.println(SNS.getError());
-  delay(250);
+  //Serial.println(SNS.getError());
+  SNS.readAllChannels();
+  for (uint8_t c = 0; c < CHANNELS; c++) {
+    Serial.print(SNS.chnRaw[c]);
+    Serial.print(",");
+  }
+  Serial.println();
+
+  delay(100);
 }

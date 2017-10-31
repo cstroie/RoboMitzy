@@ -49,13 +49,13 @@ uint8_t Sensors::readChannel(uint8_t channel) {
   // Wait for voltage to settle after changing the MUX
   if (channel == 0) {
     // Can not compute anything for the first channel, just wait
-    delayMicroseconds(25 + 75);
+    delayMicroseconds(25 + 175);
   }
   else {
     // Compute the relative value of the previous channel
     calcRelative(channel - 1);
     // And wait some more...
-    delayMicroseconds(75);
+    delayMicroseconds(175);
   }
   // Read the channel
   return readRaw();
