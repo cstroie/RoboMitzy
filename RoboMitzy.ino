@@ -19,11 +19,14 @@ void snsCalibrate() {
   // Read the sensors to allow them to stabilize
   timeout = millis() + 2000UL;
   while (millis() < timeout) {
-    SNS.readAllChannels();
+    //SNS.readAllChannels();
+    SNS.readMinMax();
     count++;
   }
-  Serial.println(2000.0 / count);
+  Serial.println(2000.0 / count / CHANNELS, 4);
+
   count = 0;
+  SNS.polReset();
   // Read again the sensors, keeping the minimum and maximum for each one
   timeout = millis() + 3000UL;
   while (millis() < timeout) {
@@ -31,7 +34,19 @@ void snsCalibrate() {
     SNS.readMinMax();
     count++;
   }
-  Serial.println(3000.0 / count);
+  Serial.println(3000.0 / count / CHANNELS, 4);
+
+
+  for (uint8_t c = 0; c < 16; c++) {
+    Serial.print(c);
+    Serial.print(" ");
+    Serial.println(SNS.polHst[c]);
+  }
+
+
+  // Precalculate the channel span
+  SNS.calcSpan();
+
   // Show the results
   for (uint8_t c = 0; c < CHANNELS; c++) {
     Serial.print(c);
@@ -41,6 +56,27 @@ void snsCalibrate() {
     Serial.print(SNS.chnMax[c]);
     Serial.println();
   }
+
+  // Read again the sensors, calibrated
+  timeout = millis() + 5000UL;
+  while (millis() < timeout) {
+    SNS.readAllChannels();
+    count++;
+  }
+  Serial.println(5000.0 / count / CHANNELS, 4);
+
+  // Show the calibrated readings
+  for (uint8_t c = 0; c < CHANNELS; c++) {
+    Serial.print(c);
+    Serial.print(" ");
+    Serial.print(SNS.chnVal[c]);
+    Serial.print(",");
+    Serial.print(SNS.chnSpn[c]);
+    Serial.println();
+  }
+
+
+
 }
 
 /**
@@ -55,18 +91,13 @@ void setup() {
   // Calibrate
   snsCalibrate();
   // HALT
-  while (true);
+  //while (true);
 }
 
 /**
   Main Arduino loop
 */
 void loop() {
-  SNS.readAllChannels();
-  for (uint8_t c = 0; c < CHANNELS; c++) {
-    Serial.print(SNS.chnRaw[c]);
-    Serial.print(",");
-  }
-  Serial.println();
+  Serial.println(SNS.getError());
   delay(250);
 }
