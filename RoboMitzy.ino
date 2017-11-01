@@ -4,7 +4,7 @@
   Copyright 2017 Costin STROIE <costinstroie@eridu.eu.org>
 */
 
-#define DEBUG
+//#define DEBUG
 
 #include "Sensors.h"
 
@@ -128,7 +128,7 @@ void setup() {
   snsCalibrate();
 
   // HALT
-  while (true);
+  //while (true);
 }
 
 /**

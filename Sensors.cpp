@@ -21,9 +21,11 @@ void Sensors::init(uint8_t pin) {
   ADCSRA &= ~_BV(ADPS0);
   ADCSRA &= ~_BV(ADPS1);
   // Enable the ADC
-  ADCSRA |=  _BV(ADEN);
+  //ADCSRA |=  _BV(ADEN);
   // Wait for voltage to settle (bandgap stabilizes in 40-80 us)
   delay(10);
+  // Dummy analog read
+  analogRead(A0);
   // Keep the IR leds pin and configure the output
   pinIR = pin;
   pinMode(pinIR, OUTPUT);
@@ -63,12 +65,14 @@ uint8_t Sensors::readChannel(uint8_t channel) {
   if (channel == 0) {
     // Can not compute anything for the first channel, just wait
     delayMicroseconds(25 + 175);
+    //delay(1);
   }
   else {
     // Compute the relative value of the previous channel
     calcRelative(channel - 1);
     // And wait some more...
     delayMicroseconds(175);
+    //delay(1);
   }
   // Read the channel
   return readRaw();
