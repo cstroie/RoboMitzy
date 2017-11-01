@@ -90,7 +90,7 @@ void Sensors::setChannel(uint8_t channel) {
 uint8_t Sensors::readRaw() {
   // Start conversion
   ADCSRA |= _BV(ADSC);
-  // Wait to finish
+  // Wait to finish (13 cycles)
   while (bit_is_set(ADCSRA, ADSC));
   // Read register ADCH
   return ADCH;
@@ -100,7 +100,6 @@ uint8_t Sensors::readRaw() {
   Read the channels, update the minimum and maximum and keep data for histogram
 */
 void Sensors::calibrate() {
-  uint8_t hstidx;
   for (uint8_t c = 0; c < CHANNELS; c++) {
     // Set the MUX
     setChannel(c);
@@ -110,11 +109,12 @@ void Sensors::calibrate() {
     chnRaw[c] = readRaw();
     if (chnRaw[c] < chnMin[c]) chnMin[c] = chnRaw[c];
     if (chnRaw[c] > chnMax[c]) chnMax[c] = chnRaw[c];
-    // Fill the polarity histogram
-    hstidx = (chnRaw[c] >> 4);
-    if (polHst[hstidx] < 0xffff)
-      polHst[hstidx]++;
-    polCnt++;
+    // Use the two paramedian sensors to fill the polarity histogram
+    if ((c == 3) or (c == 4)) {
+      // Get the histogram index
+      uint8_t idx = (chnRaw[c] >> 4);
+      polHst[idx]++;
+    }
   }
 }
 
@@ -124,25 +124,46 @@ void Sensors::calibrate() {
 void Sensors::polReset() {
   for (uint8_t i = 0; i < 16; i++)
     polHst[i] = 0;
-  polCnt = 0;
 }
 
 /**
-  Get the surface polarity
-  positive: black line on white background
-  negative: white line on black background
+  Get the surface polarity:
+  + positive: black line on white background
+  - negative: white line on black background
 */
 bool Sensors::getPolarity() {
-  // FIXME
-  return true;
+  uint16_t total, count;
+  uint8_t center;
+  // Count all items in histogram
+  for (uint8_t i = 0; i < 16; i++)
+    total += polHst[i];
+  // Half the total
+  total = total >> 1;
+  // Find the binary distribution
+  for (uint8_t i = 0; i < 16; i++) {
+    count += polHst[i];
+    // Stop when reaching half the total
+    if (count >= total) {
+      center = i;
+      break;
+    }
+  }
+  if (center < 8) polarity = true;
+  else            polarity = false;
+  return polarity;
 }
 
 /**
-  Pre-calculate channel span: max-min
+  Calculate channel range: max-min
 */
-void Sensors::calcSpan() {
-  for (uint8_t c = 0; c < CHANNELS; c++)
-    chnSpn[c] = chnMax[c] - chnMin[c];
+bool Sensors::validate() {
+  bool valid = true;
+  for (uint8_t c = 0; c < CHANNELS; c++) {
+    chnRange[c] = chnMax[c] - chnMin[c];
+    // Validate (range should be greater than half the sensor definition)
+    if (chnRange[c] < 0x7F) valid = false;
+  }
+  return valid;
 }
 
 /**
@@ -151,12 +172,12 @@ void Sensors::calcSpan() {
 void Sensors::calcRelative(uint8_t channel) {
   // Upscale to 16 bits
   uint16_t y = chnRaw[channel];
-  // Keep the raw value inside the calibrated interval
+  // Keep the raw value inside the calibrated interval: saturate
   if      (y < chnMin[channel]) y = chnMin[channel];
   else if (y > chnMax[channel]) y = chnMax[channel];
   // Do the integer math
   y -= chnMin[channel];
-  chnVal[channel] = (uint8_t)((y << 8) / chnSpn[channel]);
+  chnVal[channel] = (uint8_t)((y << 8) / chnRange[channel]);
 }
 
 /**

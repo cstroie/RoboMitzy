@@ -25,7 +25,7 @@ class Sensors {
     void setChannel(uint8_t channel);
     uint8_t readRaw();
     void calibrate();
-    void calcSpan();
+    bool validate();
     void calcRelative(uint8_t channel);
 
     int16_t getError();
@@ -37,14 +37,13 @@ class Sensors {
     uint8_t chnRaw[CHANNELS];   // Raw analog channel read
     uint8_t chnMax[CHANNELS];   // Maximum read value during calibration
     uint8_t chnMin[CHANNELS];   // Maximum read value during calibration
-    uint8_t chnSpn[CHANNELS];   // Channel span: max - min, precalculated
+    uint8_t chnRange[CHANNELS]; // Channel range: max - min, precalculated
     uint8_t chnVal[CHANNELS];   // Calibrated analog value
     // Channel weights
     int8_t  chnWht[CHANNELS] = { -4, -3, -2, -1, 1, 2, 3, 4};
 
     bool polarity;              // Surface polarity (white/black, black/white)
     uint16_t polHst[16] = {0};  // Polarity histogram
-    uint16_t polCnt;            // Polarity samples count
 
   private:
     uint8_t pinIR;

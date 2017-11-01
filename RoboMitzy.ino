@@ -4,6 +4,7 @@
   Copyright 2017 Costin STROIE <costinstroie@eridu.eu.org>
 */
 
+#define DEBUG
 
 #include "Sensors.h"
 
@@ -13,42 +14,48 @@ Sensors SNS;
   Calibrate the sensors
 */
 void snsCalibrate() {
-  // Calibrate the sensors for 5 seconds
-  uint32_t timeout;
+  uint32_t timeDelay, timeStop;
   uint16_t count = 0;
+
   // Read the sensors to allow them to stabilize
-  timeout = millis() + 2000UL;
-  while (millis() < timeout) {
-    //SNS.readAllChannels();
+  timeDelay = 2000UL;
+  timeStop = millis() + timeDelay;
+  while (millis() < timeStop) {
     SNS.calibrate();
     count++;
   }
-  Serial.println(2000.0 / count / CHANNELS, 4);
+#ifdef DEBUG
+  Serial.print(F("Warm-up    : "));
+  Serial.print(1000 * timeDelay / count / CHANNELS, 4);
+  Serial.println(F("us"));
+#endif
 
-  count = 0;
-  SNS.polReset();
-  // Read again the sensors, keeping the minimum and maximum for each one
-  timeout = millis() + 3000UL;
-  while (millis() < timeout) {
-    // FIXME Do motors
-    SNS.calibrate();
-    count++;
-  }
-  Serial.println(3000.0 / count / CHANNELS, 4);
+  do {
+    // Calibration
+    count = 0;
+    SNS.polReset();
+    timeDelay = 3000UL;
+    timeStop = millis() + timeDelay;
+    while (millis() < timeStop) {
+      SNS.calibrate();
+      count++;
+    }
+#ifdef DEBUG
+    Serial.print(F("Calibration: "));
+    Serial.print(1000 * timeDelay / count / CHANNELS, 4);
+    Serial.println(F("us"));
+#endif
+  } while (not SNS.validate());
 
+  // Get the polarity
+  SNS.getPolarity();
 
-  for (uint8_t c = 0; c < 16; c++) {
-    Serial.print(c);
-    Serial.print(" ");
-    Serial.println(SNS.polHst[c]);
-  }
-
-
-  // Precalculate the channel span
-  SNS.calcSpan();
-
+#ifdef DEBUG
+  Serial.println(F("Channel Min/Max:"));
   // Show the results
   for (uint8_t c = 0; c < CHANNELS; c++) {
+    Serial.print(F("Ch"));
+    if (c < 10) Serial.print(" ");
     Serial.print(c);
     Serial.print(" ");
     Serial.print(SNS.chnMin[c]);
@@ -56,27 +63,55 @@ void snsCalibrate() {
     Serial.print(SNS.chnMax[c]);
     Serial.println();
   }
+  // Show the polarity
+  Serial.print(F("Polarity: "));
+  if (SNS.polarity) Serial.println("positive (black on white).");
+  else              Serial.println("negative (white on black).");
+  for (uint8_t c = 0; c < 16; c++) {
+    Serial.print(F("Pol "));
+    if (c < 10) Serial.print(" ");
+    Serial.print(c);
+    Serial.print(" ");
+    Serial.println(SNS.polHst[c]);
+  }
+#endif
+}
 
-  // Read again the sensors, calibrated
-  timeout = millis() + 5000UL;
-  while (millis() < timeout) {
-    SNS.readAllChannels();
+void snsRead() {
+  uint32_t timeDelay, timeStop;
+  uint16_t count = 0;
+  uint16_t error;
+
+  // Read the sensors, calibrated
+  timeDelay = 2000UL;
+  timeStop = millis() + timeDelay;
+  while (millis() < timeStop) {
+    //SNS.readAllChannels();
+    error = SNS.getError();
     count++;
   }
-  Serial.println(5000.0 / count / CHANNELS, 4);
+#ifdef DEBUG
+  Serial.print(F("Calib. read: "));
+  Serial.print(1000 * timeDelay / count / CHANNELS, 4);
+  Serial.println(F("us"));
+  Serial.print(F("PID error  : "));
+  Serial.println(error);
+#endif
 
+#ifdef DEBUG
+  Serial.println(F("Channel reading:"));
   // Show the calibrated readings
   for (uint8_t c = 0; c < CHANNELS; c++) {
+    Serial.print(F("Ch"));
+    if (c < 10) Serial.print(" ");
     Serial.print(c);
     Serial.print(" ");
     Serial.print(SNS.chnVal[c]);
     Serial.print(",");
-    Serial.print(SNS.chnSpn[c]);
+    Serial.print(SNS.chnRange[c]);
     Serial.println();
   }
-
-
-
+#endif
 }
 
 /**
@@ -89,10 +124,11 @@ void setup() {
   // Initialize the analog line sensors
   SNS.init(3);
 
-  // Calibrate
+  // Calibrate and validate the sensors
   snsCalibrate();
+
   // HALT
-  //while (true);
+  while (true);
 }
 
 /**
