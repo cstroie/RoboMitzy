@@ -15,7 +15,7 @@ Sensors::Sensors() {
 /**
   Initialize the ADC
 */
-void Sensors::init() {
+void Sensors::init(uint8_t pin) {
   // Set prescaler to 16 (1MHz)
   ADCSRA |=  _BV(ADPS2);
   ADCSRA &= ~_BV(ADPS0);
@@ -24,6 +24,18 @@ void Sensors::init() {
   ADCSRA |=  _BV(ADEN);
   // Wait for voltage to settle (bandgap stabilizes in 40-80 us)
   delay(10);
+  // Keep the IR leds pin and configure the output
+  pinIR = pin;
+  pinMode(pinIR, OUTPUT);
+  ledOnIR();
+}
+
+void Sensors::ledOnIR() {
+  digitalWrite(pinIR, HIGH);
+}
+
+void Sensors::ledOffIR() {
+  digitalWrite(pinIR, LOW);
 }
 
 /**
@@ -41,7 +53,8 @@ void Sensors::readAllChannels() {
   Read one channel and calculate the relative value of the previous one,
   while waiting for voltage to settle after changing the MUX.
 
-  We need to wait 100us, the calc routine takes 26us, so wait for 75us more
+  The calc routine takes 26us.  We need to wait 10us for less than 100k
+  impedance and 150us for 1M.
 */
 uint8_t Sensors::readChannel(uint8_t channel) {
   // Set the MUX
@@ -84,9 +97,9 @@ uint8_t Sensors::readRaw() {
 }
 
 /**
-  Read the channels and update the minimum and maximum
+  Read the channels, update the minimum and maximum and keep data for histogram
 */
-void Sensors::readMinMax() {
+void Sensors::calibrate() {
   uint8_t hstidx;
   for (uint8_t c = 0; c < CHANNELS; c++) {
     // Set the MUX

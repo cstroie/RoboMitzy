@@ -20,7 +20,7 @@ void snsCalibrate() {
   timeout = millis() + 2000UL;
   while (millis() < timeout) {
     //SNS.readAllChannels();
-    SNS.readMinMax();
+    SNS.calibrate();
     count++;
   }
   Serial.println(2000.0 / count / CHANNELS, 4);
@@ -31,7 +31,7 @@ void snsCalibrate() {
   timeout = millis() + 3000UL;
   while (millis() < timeout) {
     // FIXME Do motors
-    SNS.readMinMax();
+    SNS.calibrate();
     count++;
   }
   Serial.println(3000.0 / count / CHANNELS, 4);
@@ -87,7 +87,7 @@ void setup() {
   Serial.println("RoboMitzy");
 
   // Initialize the analog line sensors
-  SNS.init();
+  SNS.init(3);
 
   // Calibrate
   snsCalibrate();

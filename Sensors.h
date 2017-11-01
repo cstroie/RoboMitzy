@@ -16,12 +16,15 @@
 class Sensors {
   public:
     Sensors();
-    void init();
+    void init(uint8_t pin);
+    void ledOnIR();
+    void ledOffIR();
+    
     void readAllChannels();
     uint8_t readChannel(uint8_t channel);
     void setChannel(uint8_t channel);
     uint8_t readRaw();
-    void readMinMax();
+    void calibrate();
     void calcSpan();
     void calcRelative(uint8_t channel);
 
@@ -44,6 +47,7 @@ class Sensors {
     uint16_t polCnt;            // Polarity samples count
 
   private:
+    uint8_t pinIR;
 };
 
 #endif /* SENSORS_H */
