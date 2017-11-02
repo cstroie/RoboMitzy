@@ -64,14 +64,14 @@ uint8_t Sensors::readChannel(uint8_t channel) {
   // Wait for voltage to settle after changing the MUX
   if (channel == 0) {
     // Can not compute anything for the first channel, just wait
-    delayMicroseconds(25 + 175);
+    delayMicroseconds(25 + 125);
     //delay(1);
   }
   else {
     // Compute the relative value of the previous channel
     calcRelative(channel - 1);
     // And wait some more...
-    delayMicroseconds(175);
+    delayMicroseconds(125);
     //delay(1);
   }
   // Read the channel
@@ -108,7 +108,7 @@ void Sensors::calibrate() {
     // Set the MUX
     setChannel(c);
     // Wait for voltage to settle
-    delayMicroseconds(100);
+    delayMicroseconds(150);
     // Read the channel
     chnRaw[c] = readRaw();
     if (chnRaw[c] < chnMin[c]) chnMin[c] = chnRaw[c];
@@ -123,9 +123,15 @@ void Sensors::calibrate() {
 }
 
 /**
-  Polarity histogram reset
+  Calibration and polarity histogram reset
 */
-void Sensors::polReset() {
+void Sensors::reset() {
+  for (uint8_t c = 0; c < CHANNELS; c++) {
+    chnRaw[c] = 0;
+    chnMin[c] = 0xFF;
+    chnMax[c] = 0x00;
+    chnRange[c] = 0;
+  }
   for (uint8_t i = 0; i < 16; i++)
     polHst[i] = 0;
 }

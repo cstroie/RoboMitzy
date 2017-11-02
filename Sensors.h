@@ -30,13 +30,13 @@ class Sensors {
 
     int16_t getError();
 
-    void polReset();
+    void reset();
     bool getPolarity();
 
 
     uint8_t chnRaw[CHANNELS];   // Raw analog channel read
-    uint8_t chnMax[CHANNELS];   // Maximum read value during calibration
-    uint8_t chnMin[CHANNELS];   // Maximum read value during calibration
+    uint8_t chnMax[CHANNELS] = {0};   // Maximum read value during calibration
+    uint8_t chnMin[CHANNELS] = {255};   // Maximum read value during calibration
     uint8_t chnRange[CHANNELS]; // Channel range: max - min, precalculated
     uint8_t chnVal[CHANNELS];   // Calibrated analog value
     // Channel weights
