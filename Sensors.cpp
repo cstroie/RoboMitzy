@@ -6,6 +6,8 @@
   This file is part of RoboMitzy.
 */
 
+#define MUX_DELAY_US 150
+
 #include "Arduino.h"
 #include "Sensors.h"
 
@@ -13,29 +15,38 @@ Sensors::Sensors() {
 }
 
 /**
-  Initialize the ADC
+  Initialize the line sensor
 */
 void Sensors::init(uint8_t pin) {
+  // Start with a dummy analog read
+  analogRead(A0);
+  // Disconnect the digital inputs from the ADC channels
+  DIDR0 = 0xFF;
   // Set prescaler to 16 (1MHz)
   ADCSRA |=  _BV(ADPS2);
-  ADCSRA &= ~_BV(ADPS0);
   ADCSRA &= ~_BV(ADPS1);
-  // Enable the ADC
-  //ADCSRA |=  _BV(ADEN);
+  ADCSRA &= ~_BV(ADPS0);
   // Wait for voltage to settle (bandgap stabilizes in 40-80 us)
   delay(10);
-  // Dummy analog read
-  analogRead(A0);
-  // Keep the IR leds pin and configure the output
+  // Set the IR leds pin and configure the output
   pinIR = pin;
   pinMode(pinIR, OUTPUT);
+  // Turn the leds on
   ledOnIR();
+  // Calibration reset
+  reset();
 }
 
+/**
+  Turn on the infrared leds
+*/
 void Sensors::ledOnIR() {
   digitalWrite(pinIR, HIGH);
 }
 
+/**
+  Turn off the infrared leds
+*/
 void Sensors::ledOffIR() {
   digitalWrite(pinIR, LOW);
 }
@@ -44,7 +55,8 @@ void Sensors::ledOffIR() {
   Read the channels
 */
 void Sensors::readAllChannels() {
-  // Read each channel and compute the relative values for all but the last
+  // Read each channel, while computing the relative values for all
+  // but the last, then compute for the last
   for (uint8_t c = 0; c < CHANNELS; c++)
     chnRaw[c] = readChannel(c);
   // Compute the relative value for the last channel
@@ -52,11 +64,11 @@ void Sensors::readAllChannels() {
 }
 
 /**
-  Read one channel and calculate the relative value of the previous one,
+  Read one channel and calculate the relative value of the previous one
   while waiting for voltage to settle after changing the MUX.
 
-  The calc routine takes 26us.  We need to wait 10us for less than 100k
-  impedance and 150us for 1M.
+  The calc routine takes 26us.  We need to wait 10us for an impedance
+  smaller than 100k and 150us for 1M.
 */
 uint8_t Sensors::readChannel(uint8_t channel) {
   // Set the MUX
@@ -64,15 +76,13 @@ uint8_t Sensors::readChannel(uint8_t channel) {
   // Wait for voltage to settle after changing the MUX
   if (channel == 0) {
     // Can not compute anything for the first channel, just wait
-    delayMicroseconds(25 + 125);
-    //delay(1);
+    delayMicroseconds(MUX_DELAY_US);
   }
   else {
     // Compute the relative value of the previous channel
     calcRelative(channel - 1);
-    // And wait some more...
-    delayMicroseconds(125);
-    //delay(1);
+    // Then wait some more...
+    delayMicroseconds(MUX_DELAY_US - 25);
   }
   // Read the channel
   return readRaw();
@@ -82,19 +92,21 @@ uint8_t Sensors::readChannel(uint8_t channel) {
   Set the MUX accordingly, also set left-adjusted
 */
 void Sensors::setChannel(uint8_t channel) {
-  // Set the analog reference to DEFAULT, select the channel (low 4 bits).
-  // This also sets ADLAR (left-adjust result) to 1, so we use 8 bits.
-  // Needs external capacitor at AREF pin.
+  // Set the analog reference to DEFAULT
+  // Select the channel (lower 3 bits)
+  // Set ADLAR (left-adjust result): 8 bits ADC
+  // TODO: Needs external capacitor at AREF pin!
   ADMUX = _BV(REFS0) | _BV(ADLAR) | (channel & 0x07);
 }
 
 /**
-  Read the channel: start conversion and wait to finish, return 8 bits
+  Read the channel: start conversion and wait to finish
+  Return 8 bits
 */
 uint8_t Sensors::readRaw() {
   // Start conversion
   ADCSRA |= _BV(ADSC);
-  // Wait to finish (13 cycles)
+  // Wait to finish (13 ADC cycles)
   while (bit_is_set(ADCSRA, ADSC));
   // Read register ADCH
   return ADCH;
@@ -108,7 +120,7 @@ void Sensors::calibrate() {
     // Set the MUX
     setChannel(c);
     // Wait for voltage to settle
-    delayMicroseconds(150);
+    delayMicroseconds(MUX_DELAY_US);
     // Read the channel
     chnRaw[c] = readRaw();
     if (chnRaw[c] < chnMin[c]) chnMin[c] = chnRaw[c];
@@ -126,13 +138,15 @@ void Sensors::calibrate() {
   Calibration and polarity histogram reset
 */
 void Sensors::reset() {
+  // Reset the channels calibration
   for (uint8_t c = 0; c < CHANNELS; c++) {
-    chnRaw[c] = 0;
+    chnRaw[c] = 0x00;
     chnMin[c] = 0xFF;
     chnMax[c] = 0x00;
-    chnRange[c] = 0;
+    chnRng[c] = 0x00;
   }
-  for (uint8_t i = 0; i < 16; i++)
+  // Reset the polarity histogram
+  for (uint8_t i = 0; i < HST_SIZE; i++)
     polHst[i] = 0;
 }
 
@@ -143,23 +157,18 @@ void Sensors::reset() {
 */
 bool Sensors::getPolarity() {
   uint16_t total, count;
-  uint8_t center;
+  uint8_t  center;
   // Count all items in histogram
-  for (uint8_t i = 0; i < 16; i++)
+  for (uint8_t i = 0; i < HST_SIZE; i++)
     total += polHst[i];
-  // Half the total
+  // Half that total
   total = total >> 1;
   // Find the binary distribution
-  for (uint8_t i = 0; i < 16; i++) {
-    count += polHst[i];
-    // Stop when reaching half the total
-    if (count >= total) {
-      center = i;
-      break;
-    }
+  for (uint8_t center = 0; center < HST_SIZE; center++) {
+    count += polHst[center];    // Accumulate
+    if (count >= total) break;  // Stop when reaching half the total
   }
-  if (center < 8) polarity = true;
-  else            polarity = false;
+  polarity = center < 8;
   return polarity;
 }
 
@@ -169,9 +178,10 @@ bool Sensors::getPolarity() {
 bool Sensors::validate() {
   bool valid = true;
   for (uint8_t c = 0; c < CHANNELS; c++) {
-    chnRange[c] = chnMax[c] - chnMin[c];
+    // Get the sensor range
+    chnRng[c] = chnMax[c] - chnMin[c];
     // Validate (range should be greater than half the sensor definition)
-    if (chnRange[c] < 0x7F) valid = false;
+    if (chnRng[c] < 0x7F) valid = false;
   }
   return valid;
 }
@@ -187,7 +197,7 @@ void Sensors::calcRelative(uint8_t channel) {
   else if (y > chnMax[channel]) y = chnMax[channel];
   // Do the integer math
   y -= chnMin[channel];
-  chnVal[channel] = (uint8_t)((y << 8) / chnRange[channel]);
+  chnVal[channel] = (uint8_t)((y << 8) / chnRng[channel]);
 }
 
 /**

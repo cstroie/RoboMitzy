@@ -112,7 +112,7 @@ void snsRead() {
     Serial.print(" ");
     Serial.print(SNS.chnVal[c]);
     Serial.print(",");
-    Serial.print(SNS.chnRange[c]);
+    Serial.print(SNS.chnRng[c]);
     Serial.println();
   }
 #endif
