@@ -25,7 +25,7 @@ class Sensors {
     uint8_t readChannel(uint8_t channel);
     void    setChannel(uint8_t channel);
     uint8_t readRaw();
-    void    calibrate();
+    bool    calibrate();
     bool    validate();
     void    calcRelative(uint8_t channel);
 

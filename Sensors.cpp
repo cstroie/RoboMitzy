@@ -6,7 +6,7 @@
   This file is part of RoboMitzy.
 */
 
-#define MUX_DELAY_US 150
+#define MUX_DELAY_US 50
 
 #include "Arduino.h"
 #include "Sensors.h"
@@ -113,9 +113,11 @@ uint8_t Sensors::readRaw() {
 }
 
 /**
-  Read the channels, update the minimum and maximum and keep data for histogram
+  Read the channels, update the minimum and maximum, compute the sensor
+  range, validate the sensors and collect data for histogram
 */
-void Sensors::calibrate() {
+bool Sensors::calibrate() {
+  bool valid = true;
   for (uint8_t c = 0; c < CHANNELS; c++) {
     // Set the MUX
     setChannel(c);
@@ -125,13 +127,20 @@ void Sensors::calibrate() {
     chnRaw[c] = readRaw();
     if (chnRaw[c] < chnMin[c]) chnMin[c] = chnRaw[c];
     if (chnRaw[c] > chnMax[c]) chnMax[c] = chnRaw[c];
-    // Use the two paramedian sensors to fill the polarity histogram
-    if ((c == 3) or (c == 4)) {
+    // Get the sensor range
+    chnRng[c] = chnMax[c] - chnMin[c];
+    // The range should be greater than 3/4 of the sensor definition
+    if (chnRng[c] < 0xC0) valid = false;
+  }
+  // Collect data for polarity histogram if readings are valid
+  if (valid) {
+    for (uint8_t c = 0; c < CHANNELS; c++) {
       // Get the histogram index
       uint8_t idx = (chnRaw[c] >> 4);
       polHst[idx]++;
     }
   }
+  return valid;
 }
 
 /**
