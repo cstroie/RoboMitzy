@@ -4,18 +4,21 @@
   Copyright 2017 Costin STROIE <costinstroie@eridu.eu.org>
 */
 
-//#define DEBUG
+#define DEBUG
 
 #include "Sensors.h"
+#include "FastPID.h"
 
 Sensors SNS;
+FastPID PID;
 
 /**
   Calibrate the sensors
 */
 void snsCalibrate() {
   SNS.reset();
-  while (not SNS.calibrate());
+  //while (not SNS.calibrate());
+  SNS.calibrate();
   // Get the polarity
   SNS.getPolarity();
 #ifdef DEBUG
@@ -48,7 +51,7 @@ void snsCalibrate() {
 
 void snsRead() {
   uint32_t timeDelay, timeStop;
-  uint16_t count = 0;
+  uint32_t count = 0;
   uint16_t error;
 
   // Read the sensors, calibrated
@@ -57,12 +60,14 @@ void snsRead() {
   while (millis() < timeStop) {
     SNS.readAllChannels();
     //error = SNS.getError();
+    //SNS.calcRelative(0);
     count++;
   }
 #ifdef DEBUG
-  Serial.print(F("Calib. read: "));
-  Serial.print(1000UL * timeDelay / count / CHANNELS);
+  Serial.print(F("Calib. read 8ch: "));
+  Serial.print(1000UL * timeDelay / count);
   Serial.println(F("us"));
+  Serial.println(count);
   Serial.print(F("PID error  : "));
   Serial.println(error);
 #endif
@@ -97,21 +102,46 @@ void setup() {
   snsCalibrate();
 
   // HALT
-  //while (true) snsCalibrate();
+  //while (true); // snsCalibrate();
+
+  PID.configure(5, 3, 2, 0, 16, true);
+
+
+  uint32_t timeDelay, timeStop;
+  uint32_t count = 0;
+  // Read the sensors, calibrated
+  timeDelay = 2000UL;
+  timeStop = millis() + timeDelay;
+  int16_t pos;
+  int16_t step;
+
+  while (millis() < timeStop) {
+    pos = SNS.getPosition();
+    step = PID.step(pos, 0);
+    count++;
+  }
+#ifdef DEBUG
+  Serial.print(F("PID: "));
+  Serial.print(1000UL * timeDelay / count);
+  Serial.println(F("us"));
+  Serial.println(count);
+#endif
+while (true);
+
 }
 
 /**
   Main Arduino loop
 */
 void loop() {
-  //Serial.println(SNS.getError());
-  SNS.readAllChannels();
+  int16_t pos = SNS.getPosition();
+  int16_t step = PID.step(pos, 0);
   for (uint8_t c = 0; c < CHANNELS; c++) {
     //Serial.print(SNS.chnRaw[c]);
     Serial.print(SNS.chnVal[c]);
     Serial.print(",");
   }
-  Serial.println();
+  Serial.println(step);
 
   delay(100);
 }
