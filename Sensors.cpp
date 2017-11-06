@@ -52,7 +52,7 @@ void Sensors::ledOffIR() {
 }
 
 /**
-  Read the channels
+  Read the channels; needs 518us at 16MHz
 */
 void Sensors::readAllChannels() {
   // Read each channel, while computing the relative values for all
@@ -67,8 +67,8 @@ void Sensors::readAllChannels() {
   Read one channel and calculate the relative value of the previous one
   while waiting for voltage to settle after changing the MUX.
 
-  The calc routine takes 26us.  We need to wait 10us for an impedance
-  smaller than 100k and 150us for 1M.
+  The calc routine takes 16us.  We need to wait 10us for an impedance
+  smaller than 100k and 150us for 1M.  We'll wait 50us
 */
 uint8_t Sensors::readChannel(uint8_t channel) {
   // Set the MUX
@@ -82,7 +82,7 @@ uint8_t Sensors::readChannel(uint8_t channel) {
     // Compute the relative value of the previous channel
     calcRelative(channel - 1);
     // Then wait some more...
-    delayMicroseconds(MUX_DELAY_US - 25);
+    delayMicroseconds(MUX_DELAY_US - 16);
   }
   // Read the channel
   return readRaw();
@@ -196,7 +196,7 @@ bool Sensors::validate() {
 }
 
 /**
-  Calculate the relative sensor value
+  Calculate the relative sensor value; needs 16us at 16MHz
 */
 void Sensors::calcRelative(uint8_t channel) {
   // Upscale to 16 bits
