@@ -210,15 +210,38 @@ void Sensors::calcRelative(uint8_t channel) {
 }
 
 /**
-  Get the error for the PID controller
+  Get the line position for the PID controller
 */
-int16_t Sensors::getError() {
+int16_t Sensors::getPosition() {
   int16_t result;
   // Read the sensors
   readAllChannels();
-  // Compute the error using the relative values and the weights of the channels
-  for (uint8_t c = 0; c < CHANNELS; c++)
-    result += chnVal[c] * chnWht[c];
+
+  // 713us
+  int16_t a = ((int16_t)(chnVal[4] & B11111000) >> 3) +
+              ((int16_t)(chnVal[5] & B11111000) << 2) +
+              ((int16_t)(chnVal[6] & B11100000) << 5) +
+              ((int16_t)(chnVal[7] & B11000000) << 8);
+
+  int16_t b = ((int16_t)(chnVal[3] & B11111000) >> 3) +
+              ((int16_t)(chnVal[2] & B11111000) << 2) +
+              ((int16_t)(chnVal[1] & B11100000) << 5) +
+              ((int16_t)(chnVal[0] & B11000000) << 8);
+
+  result = a - b;
+
+  /*
+    // 727us
+    // Compute the error using the relative values and the weights of the channels
+    for (uint8_t c = 0; c < CHANNELS; c++) {
+      if (polarity)
+        result += chnVal[c] * chnWht[c];
+      else
+        result += (255 - chnVal[c]) * chnWht[c];
+    }
+
+  */
+
   // Return the result
   return result;
 }

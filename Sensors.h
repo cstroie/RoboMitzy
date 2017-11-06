@@ -29,7 +29,7 @@ class Sensors {
     bool    validate();
     void    calcRelative(uint8_t channel);
 
-    int16_t getError();
+    int16_t getPosition();
 
     void    reset();
     bool    getPolarity();
