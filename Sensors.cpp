@@ -201,9 +201,8 @@ bool Sensors::validate() {
 void Sensors::calcRelative(uint8_t channel) {
   // Upscale to 16 bits
   uint16_t y = chnRaw[channel];
-  // Keep the raw value inside the calibrated interval: saturate
-  if      (y < chnMin[channel]) y = chnMin[channel];
-  else if (y > chnMax[channel]) y = chnMax[channel];
+  // Constrain the raw value inside the calibrated interval
+  constrain(y, chnMin[channel], chnMax[channel]);
   // Do the integer math
   y -= chnMin[channel];
   chnVal[channel] = (uint8_t)((y << 8) / chnRng[channel]);
