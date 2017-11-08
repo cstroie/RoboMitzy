@@ -12,6 +12,17 @@
 Sensors SNS;
 FastPID PID;
 
+void benchmark() {
+  Serial.println(F("Benchmark "));
+  uint16_t count = 10000;
+  uint32_t timeStart = millis();
+  while (count--) {
+    SNS.calcRelative(0);
+  }
+  Serial.print(1000UL * (millis() - timeStart) / 10000);
+  Serial.println(F("us"));
+}
+
 /**
   Calibrate the sensors
 */
@@ -101,6 +112,9 @@ void setup() {
   // Calibrate and validate the sensors
   snsCalibrate();
 
+  // Benchmarking
+  //benchmark();
+
   // HALT
   //while (true); // snsCalibrate();
 
@@ -126,7 +140,7 @@ void setup() {
   Serial.println(F("us"));
   Serial.println(count);
 #endif
-while (true);
+  while (true);
 
 }
 
