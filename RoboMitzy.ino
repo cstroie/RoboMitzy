@@ -8,9 +8,11 @@
 
 #include "Sensors.h"
 #include "FastPID.h"
+#include "Motors.h"
 
 Sensors SNS;
 FastPID PID;
+Motors  Motors;
 
 void benchmark() {
   Serial.println(F("Benchmark "));
