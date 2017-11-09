@@ -132,7 +132,7 @@ void setup() {
   Motors.init();
   //Motors.run(60, true, 60, true);
   //Motors.run(160, 90);
-  //Motors.off();
+  //Motors.stop();
   /*
     while (true) {
     for (int i = -120; i < 120; i++) {
