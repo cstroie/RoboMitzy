@@ -52,7 +52,7 @@ void Sensors::ledOffIR() {
 }
 
 /**
-  Read the channels; needs 518us at 16MHz
+  Read the channels; needs 542us (537us) at 16MHz
 */
 void Sensors::readAllChannels() {
   // Read each channel, while computing the relative values for all
@@ -67,7 +67,7 @@ void Sensors::readAllChannels() {
   Read one channel and calculate the relative value of the previous one
   while waiting for voltage to settle after changing the MUX.
 
-  The calc routine takes 16us.  We need to wait 10us for an impedance
+  The calc routine takes 13us.  We need to wait 10us for an impedance
   smaller than 100k and 150us for 1M.  We'll wait 50us
 */
 uint8_t Sensors::readChannel(uint8_t channel) {
@@ -82,7 +82,7 @@ uint8_t Sensors::readChannel(uint8_t channel) {
     // Compute the relative value of the previous channel
     calcRelative(channel - 1);
     // Then wait some more...
-    delayMicroseconds(MUX_DELAY_US - 16);
+    delayMicroseconds(MUX_DELAY_US - 13);
   }
   // Read the channel
   return readRaw();
@@ -196,7 +196,7 @@ bool Sensors::validate() {
 }
 
 /**
-  Calculate the relative sensor value; needs 16us at 16MHz
+  Calculate the relative sensor value; needs 13us at 16MHz
 */
 void Sensors::calcRelative(uint8_t channel) {
   // Upscale to 16 bits
@@ -216,7 +216,7 @@ int16_t Sensors::getPosition() {
   // Read the sensors
   readAllChannels();
 
-  // 713us
+  // 713us (540)
   int16_t a = ((int16_t)(chnVal[4] & B11111000) >> 3) +
               ((int16_t)(chnVal[5] & B11111000) << 2) +
               ((int16_t)(chnVal[6] & B11100000) << 5) +
@@ -230,7 +230,7 @@ int16_t Sensors::getPosition() {
   result = a - b;
 
   /*
-    // 727us
+    // 727us (549)
     // Compute the error using the relative values and the weights of the channels
     for (uint8_t c = 0; c < CHANNELS; c++) {
       if (polarity)

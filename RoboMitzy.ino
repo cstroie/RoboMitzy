@@ -15,23 +15,42 @@ FastPID PID;
 Motors  Motors;
 
 void benchmark() {
-  Serial.println(F("Benchmark "));
+  int result;
   uint16_t count = 10000;
   uint32_t timeStart = millis();
   while (count--) {
-    SNS.calcRelative(0);
+    result = SNS.getPosition();
   }
   Serial.print(1000UL * (millis() - timeStart) / 10000);
   Serial.println(F("us"));
+  Serial.print(F("Result "));
+  Serial.println(result);
+ 
 }
 
 /**
   Calibrate the sensors
 */
 void snsCalibrate() {
+#ifdef DEBUG
+  Serial.println(F("Sensors reset"));
+#endif
   SNS.reset();
-  //while (not SNS.calibrate());
-  SNS.calibrate();
+#ifdef DEBUG
+  Serial.println(F("Sensors calibrate"));
+#endif
+  while (not SNS.calibrate()) {
+    // Show partial results
+    Serial.print(F("KLB "));
+    for (uint8_t c = 0; c < CHANNELS; c++) {
+      Serial.print(SNS.chnMin[c]);
+      Serial.print("/");
+      Serial.print(SNS.chnMax[c]);
+      Serial.print(" ");
+    }
+    Serial.println();
+  }
+  //SNS.calibrate();
   // Get the polarity
   SNS.getPolarity();
 #ifdef DEBUG
@@ -43,8 +62,10 @@ void snsCalibrate() {
     Serial.print(c);
     Serial.print(" ");
     Serial.print(SNS.chnMin[c]);
-    Serial.print(",");
+    Serial.print("/");
     Serial.print(SNS.chnMax[c]);
+    Serial.print(" ");
+    Serial.print(SNS.chnRng[c]);
     Serial.println();
   }
   // Show the polarity
@@ -108,6 +129,19 @@ void setup() {
   Serial.begin(115200);
   Serial.println("RoboMitzy");
 
+  Motors.init();
+  //Motors.run(60, true, 60, true);
+  //Motors.run(160, 90);
+  //Motors.off();
+  /*
+    while (true) {
+    for (int i = -120; i < 120; i++) {
+      Motors.run(130, i);
+      delay(10);
+    }
+    }
+  */
+
   // Initialize the analog line sensors
   SNS.init(3);
 
@@ -115,7 +149,8 @@ void setup() {
   snsCalibrate();
 
   // Benchmarking
-  //benchmark();
+  Serial.println(F("Benchmark "));
+  while (true) benchmark();
 
   // HALT
   //while (true); // snsCalibrate();

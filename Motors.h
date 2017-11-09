@@ -19,9 +19,10 @@ class Motors {
     void run(uint8_t leftSpeed, bool leftDir, uint8_t rightSpeed, bool rightDir);
     void run(int8_t speed, int8_t turn);
     void off();
+    void brake();
 
-    uint8_t minSpeed = 100;
-    uint8_t maxSpeed = 200;
+    uint8_t minSpeed = 60;
+    uint8_t maxSpeed = 255;
 };
 
 #endif /* MOTORS_H */

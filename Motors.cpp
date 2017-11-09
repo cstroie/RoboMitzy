@@ -22,6 +22,8 @@ void Motors::init() {
   // Use TIMER0 on pins 6 and 5, no change in frequency
   pinMode(5, OUTPUT);
   pinMode(6, OUTPUT);
+  pinMode(7, OUTPUT);
+  pinMode(8, OUTPUT);
 }
 
 void Motors::run(uint8_t leftSpeed, bool leftDir, uint8_t rightSpeed, bool rightDir) {
@@ -32,7 +34,8 @@ void Motors::run(uint8_t leftSpeed, bool leftDir, uint8_t rightSpeed, bool right
   }
   else {
     // Left backward
-    analogWrite(5, 255 - leftSpeed);
+    //analogWrite(5, 255 - leftSpeed);
+    digitalWrite(5, LOW);
     digitalWrite(7, HIGH);
   }
   if (rightDir) {
@@ -42,7 +45,8 @@ void Motors::run(uint8_t leftSpeed, bool leftDir, uint8_t rightSpeed, bool right
   }
   else {
     // Right backward
-    analogWrite(6, 255 - rightSpeed);
+    //analogWrite(6, 255 - rightSpeed);
+    digitalWrite(6, LOW);
     digitalWrite(8, HIGH);
   }
 }
@@ -52,20 +56,34 @@ void Motors::run(int8_t speed, int8_t turn) {
 
   leftSpeed  = speed - turn;
   rightSpeed = speed + turn;
+  
+  Serial.print(leftSpeed);
+  Serial.print(",");
+  Serial.print(rightSpeed);
+  Serial.println();
+  
 
   if (speed == 0) { // Off
-    analogWrite(5, LOW);
-    analogWrite(6, LOW);
+    digitalWrite(5, LOW);
+    digitalWrite(6, LOW);
   }
   else {            // Forward or backward
-    run(abs(leftSpeed) + minSpeed, leftSpeed > 0, abs(rightSpeed) + minSpeed, rightSpeed > 0);
+    //run(abs(leftSpeed) + minSpeed, leftSpeed > 0, abs(rightSpeed) + minSpeed, rightSpeed > 0);
+    run(abs(leftSpeed), leftSpeed > 0, abs(rightSpeed), rightSpeed > 0);
   }
 }
 
 void Motors::off() {
-  analogWrite(5, LOW);
-  analogWrite(6, LOW);
+  digitalWrite(5, LOW);
+  digitalWrite(6, LOW);
   digitalWrite(7, LOW);
   digitalWrite(8, LOW);
+}
+
+void Motors::brake() {
+  digitalWrite(5, HIGH);
+  digitalWrite(6, HIGH);
+  digitalWrite(7, HIGH);
+  digitalWrite(8, HIGH);
 }
 
