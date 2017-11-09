@@ -87,8 +87,13 @@ void Motors::run(uint8_t speed, int8_t turn) {
   Only forward running.
 */
 void Motors::run(int8_t speed, int8_t turn) {
-  uint8_t fast = abs(speed) << 1;
-  uint8_t slow = fast - (abs(turn) << 1);
+  // Speed and turn in absolute values
+  uint8_t aspeed = abs(speed);
+  uint8_t aturn = abs(turn);
+  // The fast and the slow wheels
+  uint8_t fast = aspeed == 0x80 ? 0xFF : aspeed << 1;
+  uint8_t slow = aspeed > aturn ? ((aspeed - aturn) << 1) : 0;
+  // Run the motors
   if      (turn > 0)  run(fast, true, slow, true);
   else if (turn < 0)  run(slow, true, fast, true);
   else                run(fast, true, fast, true);
