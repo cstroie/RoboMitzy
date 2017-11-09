@@ -6,26 +6,28 @@
 
 #define DEBUG
 
+#define BENCH_COUNT 10000
+
 #include "Sensors.h"
 #include "FastPID.h"
 #include "Motors.h"
 
 Sensors SNS;
 FastPID PID;
-Motors  Motors;
+Motors  M;
 
-void benchmark() {
-  int result;
-  uint16_t count = 10000;
-  uint32_t timeStart = millis();
-  while (count--) {
+int16_t  benchmark() {
+  int16_t result;
+  uint16_t count = BENCH_COUNT;
+  uint32_t start = millis();
+  while (count--)
     result = SNS.getPosition();
-  }
-  Serial.print(1000UL * (millis() - timeStart) / 10000);
-  Serial.println(F("us"));
-  Serial.print(F("Result "));
+  // Print the benchmark result
+  Serial.print(F("Loop: "));
+  Serial.print(1000UL * (millis() - start) / BENCH_COUNT);
+  Serial.print(F("us, Result: "));
   Serial.println(result);
- 
+  return result;
 }
 
 /**
@@ -33,15 +35,11 @@ void benchmark() {
 */
 void snsCalibrate() {
 #ifdef DEBUG
-  Serial.println(F("Sensors reset"));
-#endif
-  SNS.reset();
-#ifdef DEBUG
-  Serial.println(F("Sensors calibrate"));
+  Serial.println(F("Calibration"));
 #endif
   while (not SNS.calibrate()) {
     // Show partial results
-    Serial.print(F("KLB "));
+    Serial.print(F("Clb "));
     for (uint8_t c = 0; c < CHANNELS; c++) {
       Serial.print(SNS.chnMin[c]);
       Serial.print("/");
@@ -54,7 +52,8 @@ void snsCalibrate() {
   // Get the polarity
   SNS.getPolarity();
 #ifdef DEBUG
-  Serial.println(F("Channel Min/Max:"));
+  Serial.println();
+  Serial.println(F("Channel Min/Max Rng"));
   // Show the results
   for (uint8_t c = 0; c < CHANNELS; c++) {
     Serial.print(F("Ch"));
@@ -69,6 +68,7 @@ void snsCalibrate() {
     Serial.println();
   }
   // Show the polarity
+  Serial.println();
   Serial.print(F("Polarity: "));
   if (SNS.polarity) Serial.println("positive (black on white).");
   else              Serial.println("negative (white on black).");
@@ -129,14 +129,14 @@ void setup() {
   Serial.begin(115200);
   Serial.println("RoboMitzy");
 
-  Motors.init();
-  //Motors.run(60, true, 60, true);
-  //Motors.run(160, 90);
-  //Motors.stop();
+  M.init();
+  //M.run(60, true, 60, true);
+  //M.run(160, 90);
+  //M.stop();
   /*
     while (true) {
     for (int i = -120; i < 120; i++) {
-      Motors.run(130, i);
+      M.run(130, i);
       delay(10);
     }
     }
@@ -148,37 +148,30 @@ void setup() {
   // Calibrate and validate the sensors
   snsCalibrate();
 
-  // Benchmarking
-  Serial.println(F("Benchmark "));
-  while (true) benchmark();
 
   // HALT
   //while (true); // snsCalibrate();
 
-  PID.configure(5, 3, 2, 0, 16, true);
+  uint8_t s = 10 - 30;
+  Serial.println(s);
 
 
-  uint32_t timeDelay, timeStop;
-  uint32_t count = 0;
-  // Read the sensors, calibrated
-  timeDelay = 2000UL;
-  timeStop = millis() + timeDelay;
-  int16_t pos;
-  int16_t step;
+  PID.configure(2, 0, 0, 0, 16, true);
 
-  while (millis() < timeStop) {
-    pos = SNS.getPosition();
-    step = PID.step(pos, 0);
-    count++;
+
+  // Benchmarking
+  Serial.println();
+  Serial.println(F("Benchmark "));
+  while (true) {
+    int16_t pos = benchmark();
+    int16_t step = PID.step(pos, 0);
+    for (uint8_t c = 0; c < CHANNELS; c++) {
+      Serial.print(SNS.chnRaw[c]);
+      //Serial.print(SNS.chnVal[c]);
+      Serial.print(",");
+    }
+    Serial.println(step);
   }
-#ifdef DEBUG
-  Serial.print(F("PID: "));
-  Serial.print(1000UL * timeDelay / count);
-  Serial.println(F("us"));
-  Serial.println(count);
-#endif
-  while (true);
-
 }
 
 /**
@@ -188,8 +181,8 @@ void loop() {
   int16_t pos = SNS.getPosition();
   int16_t step = PID.step(pos, 0);
   for (uint8_t c = 0; c < CHANNELS; c++) {
-    //Serial.print(SNS.chnRaw[c]);
-    Serial.print(SNS.chnVal[c]);
+    Serial.print(SNS.chnRaw[c]);
+    //Serial.print(SNS.chnVal[c]);
     Serial.print(",");
   }
   Serial.println(step);
