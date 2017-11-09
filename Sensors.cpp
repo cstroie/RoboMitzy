@@ -128,7 +128,7 @@ bool Sensors::calibrate() {
     // Get the sensor range
     chnRng[c] = chnMax[c] - chnMin[c];
     // The range should be greater than 3/4 of the sensor definition
-    if (chnRng[c] < 0xC0) valid = false;
+    if (chnRng[c] < THRESHOLD) valid = false;
   }
   // Collect data for polarity histogram if readings are valid
   if (valid) {
@@ -210,36 +210,21 @@ void Sensors::calcRelative(uint8_t channel) {
   Get the line position for the PID controller
 */
 int16_t Sensors::getPosition() {
-  int16_t result;
+  int32_t result = 0;
   // Read the sensors
   readAllChannels();
 
-  // 713us (540)
-  int16_t a = ((int16_t)(chnVal[4] & B11111000) >> 3) +
-              ((int16_t)(chnVal[5] & B11111000) << 2) +
-              ((int16_t)(chnVal[6] & B11100000) << 5) +
-              ((int16_t)(chnVal[7] & B11000000) << 8);
-
-  int16_t b = ((int16_t)(chnVal[3] & B11111000) >> 3) +
-              ((int16_t)(chnVal[2] & B11111000) << 2) +
-              ((int16_t)(chnVal[1] & B11100000) << 5) +
-              ((int16_t)(chnVal[0] & B11000000) << 8);
-
-  result = a - b;
-
-  /*
-    // 727us (549)
-    // Compute the error using the relative values and the weights of the channels
+  // 550us
+  // Compute the line position using the relative values and
+  // the weights of the channels, in fixed point, 8 bits fractional
+  if (polarity) {
     for (uint8_t c = 0; c < CHANNELS; c++) {
-      if (polarity)
-        result += chnVal[c] * chnWht[c];
-      else
-        result += (255 - chnVal[c]) * chnWht[c];
+      result += (((uint16_t)chnVal[c]) << 8) * chnWht[c];
     }
-
-  */
-
+  }
   // Return the result
-  return result;
+  //if (result < 0) result = -(abs(result) >> 8);
+  //else            result = result >> 8;
+  return (int16_t)(result / 256);
 }
 

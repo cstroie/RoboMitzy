@@ -9,8 +9,10 @@
 #ifndef SENSORS_H
 #define SENSORS_H
 
-#define CHANNELS 8    // Number of ADC channels
-#define HST_SIZE 16   // Histogram size
+#define CHANNELS      8    // Number of ADC channels
+#define HST_SIZE      16   // Histogram size
+
+#define THRESHOLD     0xC0
 
 #define MUX_DELAY_US  50
 #define CALC_DELAY_US 13
@@ -23,7 +25,7 @@ class Sensors {
     void    init(uint8_t pin);
     void    ledOnIR();
     void    ledOffIR();
-    
+
     void    readAllChannels();
     uint8_t readChannel(uint8_t channel);
     void    setChannel(uint8_t channel);
@@ -43,9 +45,9 @@ class Sensors {
     uint8_t chnMin[CHANNELS];   // Minimum read value during calibration
     uint8_t chnRng[CHANNELS];   // Channel range: max - min, precalculated
     uint8_t chnVal[CHANNELS];   // Calibrated channel analog value
-    
-    // Channel weights
-    int8_t  chnWht[CHANNELS] = { -4, -3, -2, -1, 1, 2, 3, 4};
+
+    // Channel weights: 256 * 1.2^n, n=0..3
+    int16_t chnWht[CHANNELS] = { -442, -368, -307, -256, 256, 307, 368, 442};
 
     bool polarity;              // Surface polarity (white/black, black/white)
     uint16_t polHst[HST_SIZE];  // Polarity histogram
