@@ -12,6 +12,9 @@
 #define CHANNELS 8    // Number of ADC channels
 #define HST_SIZE 16   // Histogram size
 
+#define MUX_DELAY_US  50
+#define CALC_DELAY_US 13
+
 #include "Arduino.h"
 
 class Sensors {

@@ -6,8 +6,6 @@
   This file is part of RoboMitzy.
 */
 
-#define MUX_DELAY_US 50
-
 #include "Arduino.h"
 #include "Sensors.h"
 
@@ -82,7 +80,7 @@ uint8_t Sensors::readChannel(uint8_t channel) {
     // Compute the relative value of the previous channel
     calcRelative(channel - 1);
     // Then wait some more...
-    delayMicroseconds(MUX_DELAY_US - 13);
+    delayMicroseconds(MUX_DELAY_US - CALC_DELAY_US);
   }
   // Read the channel
   return readRaw();
