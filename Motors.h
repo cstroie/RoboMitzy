@@ -25,7 +25,7 @@ class Motors {
     void right(uint8_t speed, bool dir);
     void run(uint8_t lS, bool lD, uint8_t rS, bool rD);
     void run(uint8_t speed, int8_t turn);
-    void run(int8_t speed, int8_t turn);
+    void drive(int8_t speed, int8_t turn);
     void stop(bool br = false);
 
     uint8_t minSpeed = 60;

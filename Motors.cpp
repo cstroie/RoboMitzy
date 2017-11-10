@@ -86,7 +86,7 @@ void Motors::run(uint8_t speed, int8_t turn) {
   Positive turn is to the right, negative to the left.
   Only forward running.
 */
-void Motors::run(int8_t speed, int8_t turn) {
+void Motors::drive(int8_t speed, int8_t turn) {
   // Speed and turn in absolute values
   uint8_t aspeed = abs(speed);
   uint8_t aturn = abs(turn);
