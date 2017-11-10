@@ -4,7 +4,7 @@
   Copyright 2017 Costin STROIE <costinstroie@eridu.eu.org>
 */
 
-#define DEBUG
+//#define DEBUG
 
 #define BENCH_COUNT 10000
 
@@ -12,11 +12,12 @@
 #include "FastPID.h"
 #include "Motors.h"
 
+
 Sensors SNS;
 FastPID PID;
 Motors  M;
 
-int16_t  benchmark() {
+int16_t benchmark() {
   int16_t result;
   uint16_t count = BENCH_COUNT;
   uint32_t start = millis();
@@ -38,6 +39,7 @@ void snsCalibrate() {
   Serial.println(F("Calibration"));
 #endif
   while (not SNS.calibrate()) {
+#ifdef DEBUG
     // Show partial results
     Serial.print(F("Clb "));
     for (uint8_t c = 0; c < CHANNELS; c++) {
@@ -47,6 +49,7 @@ void snsCalibrate() {
       Serial.print(" ");
     }
     Serial.println();
+#endif
   }
   //SNS.calibrate();
   // Get the polarity
@@ -129,6 +132,15 @@ void setup() {
   Serial.begin(115200);
   Serial.println("RoboMitzy");
 
+  // Initialize the analog line sensors
+  SNS.init(3);
+  // Calibrate and validate the sensors
+  snsCalibrate();
+
+  // Configure the PID controller
+  PID.configure(1.1, 0.2, 0.1, 0, 16, true);
+
+  // Initialize the motors
   M.init();
   //M.run(60, true, 60, true);
   //M.run(160, 90);
@@ -141,51 +153,31 @@ void setup() {
     }
     }
   */
-
-  // Initialize the analog line sensors
-  SNS.init(3);
-
-  // Calibrate and validate the sensors
-  snsCalibrate();
-
-
-  // HALT
-  //while (true); // snsCalibrate();
-
-  uint8_t s = 10 - 30;
-  Serial.println(s);
-
-
-  PID.configure(2, 0, 0, 0, 16, true);
-
-
-  // Benchmarking
-  Serial.println();
-  Serial.println(F("Benchmark "));
-  while (true) {
-    int16_t pos = benchmark();
-    int16_t step = PID.step(pos, 0);
-    for (uint8_t c = 0; c < CHANNELS; c++) {
-      Serial.print(SNS.chnRaw[c]);
-      //Serial.print(SNS.chnVal[c]);
-      Serial.print(",");
-    }
-    Serial.println(step);
-  }
 }
 
 /**
   Main Arduino loop
 */
 void loop() {
+  // Get the line position
   int16_t pos = SNS.getPosition();
-  int16_t step = PID.step(pos, 0);
-  for (uint8_t c = 0; c < CHANNELS; c++) {
-    Serial.print(SNS.chnRaw[c]);
-    //Serial.print(SNS.chnVal[c]);
-    Serial.print(",");
-  }
-  Serial.println(step);
+  // Get the controller correction
+  int16_t stp = PID.step(-pos, 0);
+  // Adjust the motors
+  M.drive(160, stp >> 8);
 
-  delay(100);
+  /*
+    for (uint8_t c = 0; c < CHANNELS; c++) {
+      Serial.print(SNS.chnRaw[c]);
+      //Serial.print(SNS.chnVal[c]);
+      Serial.print(",");
+    }
+  */
+  Serial.print(pos >> 8);
+  Serial.print(",");
+  Serial.println(stp >> 8);
+
+
+
+  delay(20);
 }
