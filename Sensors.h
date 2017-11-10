@@ -18,6 +18,7 @@
 #define CALC_DELAY_US 13
 
 #include "Arduino.h"
+#include "FixedPoint.h"
 
 class Sensors {
   public:
@@ -31,8 +32,8 @@ class Sensors {
     void    setChannel(uint8_t channel);
     uint8_t readRaw();
     bool    calibrate();
-    bool    validate();
     void    calcRelative(uint8_t channel);
+    void    coeff();
 
     int16_t getPosition();
 
@@ -46,8 +47,13 @@ class Sensors {
     uint8_t chnRng[CHANNELS];   // Channel range: max - min, precalculated
     uint8_t chnVal[CHANNELS];   // Calibrated channel analog value
 
-    // Channel weights: 256 * 1.2^n, n=0..3
-    int16_t chnWht[CHANNELS] = { -442, -368, -307, -256, 256, 307, 368, 442};
+    // Channel weights: (x/10)^n, n=0..3
+    int16_t chnWht = 1.6 * FP_ONE;
+    int16_t chnCff[CHANNELS];   // Channel coefficients, computed at runtime
+
+
+    uint8_t chnTst[CHANNELS] = {255, 255, 242, 13, 15, 248, 255, 254};
+
 
     bool polarity;              // Surface polarity (white/black, black/white)
     uint16_t polHst[HST_SIZE];  // Polarity histogram

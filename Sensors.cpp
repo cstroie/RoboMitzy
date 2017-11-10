@@ -33,6 +33,8 @@ void Sensors::init(uint8_t pin) {
   ledOnIR();
   // Calibration reset
   reset();
+  // Compute position coefficients
+  coeff();
 }
 
 /**
@@ -111,6 +113,19 @@ uint8_t Sensors::readRaw() {
 }
 
 /**
+  Calculate the relative sensor value; needs 13us at 16MHz
+*/
+void Sensors::calcRelative(uint8_t channel) {
+  // Upscale to 16 bits
+  uint16_t y = chnRaw[channel];
+  // Constrain the raw value inside the calibrated interval
+  constrain(y, chnMin[channel], chnMax[channel]);
+  // Do the integer math
+  y -= chnMin[channel];
+  chnVal[channel] = (uint8_t)((y << 8) / ((uint16_t)chnRng[channel] + 1));
+}
+
+/**
   Read the channels, update the minimum and maximum, compute the sensor
   range, validate the sensors and collect data for histogram
 */
@@ -180,51 +195,33 @@ bool Sensors::getPolarity() {
 }
 
 /**
-  Calculate channel range: max-min
+  Compute the position coefficients in Q24.8
 */
-bool Sensors::validate() {
-  bool valid = true;
-  for (uint8_t c = 0; c < CHANNELS; c++) {
-    // Get the sensor range
-    chnRng[c] = chnMax[c] - chnMin[c];
-    // Validate (range should be greater than half the sensor definition)
-    if (chnRng[c] < 0x7F) valid = false;
+void Sensors::coeff() {
+  int32_t x = FP_ONE;
+  for (uint8_t c = 0; c < (CHANNELS / 2); c++) {
+    chnCff[CHANNELS / 2 - c - 1]  = -x;
+    chnCff[CHANNELS / 2 + c]      =  x;
+    x = (int32_t)(((int64_t)x * (int64_t)chnWht + FP_ONE) >> FP_FBITS);
   }
-  return valid;
+  //for (uint8_t c = 0; c < CHANNELS; c++) Serial.println(chnCff[c]);
 }
 
 /**
-  Calculate the relative sensor value; needs 13us at 16MHz
-*/
-void Sensors::calcRelative(uint8_t channel) {
-  // Upscale to 16 bits
-  uint16_t y = chnRaw[channel];
-  // Constrain the raw value inside the calibrated interval
-  constrain(y, chnMin[channel], chnMax[channel]);
-  // Do the integer math
-  y -= chnMin[channel];
-  chnVal[channel] = (uint8_t)((y << 8) / chnRng[channel]);
-}
-
-/**
-  Get the line position for the PID controller
+  Get the line position for the PID controller (675us)
 */
 int16_t Sensors::getPosition() {
   int32_t result = 0;
-  // Read the sensors
+  // Read the sensors (540us)
   readAllChannels();
-
-  // 550us
   // Compute the line position using the relative values and
-  // the weights of the channels, in fixed point, 8 bits fractional
-  if (polarity) {
-    for (uint8_t c = 0; c < CHANNELS; c++) {
-      result += (((uint16_t)chnVal[c]) << 8) * chnWht[c];
-    }
-  }
+  // the channels coefficients, Q24.8 (150us)
+  //if (polarity) {
+  for (uint8_t c = 0; c < CHANNELS; c++)
+    result += ((fpd_t)((fp_t)chnVal[c] << FP_FBITS) * (fpd_t)chnCff[c]) >> FP_FBITS;
+  //}
+
   // Return the result
-  //if (result < 0) result = -(abs(result) >> 8);
-  //else            result = result >> 8;
-  return (int16_t)(result / 256);
+  return result >> FP_FBITS;
 }
 
