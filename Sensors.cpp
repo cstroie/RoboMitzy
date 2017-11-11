@@ -218,7 +218,7 @@ int16_t Sensors::getPosition() {
   // the channels coefficients, Q24.8 (150us)
   //if (polarity) {
   for (uint8_t c = 0; c < CHANNELS; c++)
-    result += ((fpd_t)((fp_t)chnVal[c] << FP_FBITS) * (fpd_t)chnCff[c]) >> FP_FBITS;
+    result += ((fpd_t)((fp_t)chnRaw[c] << FP_FBITS) * (fpd_t)chnCff[c]) >> FP_FBITS;
   //}
 
   // Return the result

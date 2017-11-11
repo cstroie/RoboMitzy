@@ -38,7 +38,7 @@ void snsCalibrate() {
 #ifdef DEBUG
   Serial.println(F("Calibration"));
 #endif
-  while (not SNS.calibrate()) {
+  while (SNS.calibrate()) {
 #ifdef DEBUG
     // Show partial results
     Serial.print(F("Clb "));
@@ -138,7 +138,7 @@ void setup() {
   snsCalibrate();
 
   // Configure the PID controller
-  PID.configure(1.1, 0.2, 0.1, 0, 16, true);
+  PID.configure(1, 0.1, 0.5, 0, 16, true);
 
   // Initialize the motors
   M.init();
@@ -177,7 +177,5 @@ void loop() {
   Serial.print(",");
   Serial.println(stp >> 8);
 
-
-
-  delay(20);
+  delay(100);
 }
