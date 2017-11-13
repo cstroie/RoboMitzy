@@ -2,6 +2,7 @@
   FastPID.h - A PID controlled implemented using fixed-point arithmatic.
 
   Copyright 2017 Mike Matera <matera@lifealgorithmic.com>
+  Copyright 2017 Costin STROIE <costinstroie@eridu.eu.org>
 
   This is a high-quality, high-precision PID controller that uses a fixed-point pipeline.
   Conversion from floating point coefficients to integers is done automatically.
@@ -33,35 +34,33 @@ class FastPID {
       clear();
     }
 
-    FastPID(float kp, float ki, float kd, uint16_t db = 0, int bits = 16, bool sign = false) {
-      configure(kp, ki, kd, db, bits, sign);
+    FastPID(float kp, float ki, float kd, int bits = 16, bool sign = false) {
+      configure(kp, ki, kd, bits, sign);
     }
 
     ~FastPID();
 
     void clear();
-    bool configure(float kp, float ki, float kd, uint16_t db = 0, int bits = 16, bool sign = false);
+    bool configure(float kp, float ki, float kd, int bits = 16, bool sign = false);
     int16_t step(int16_t sp, int16_t fb);
     bool err() {
-      return _cfg_err;
+      return  _cfg_err;
     }
 
   private:
-    uint32_t floatToParam(float);
-    void setCfgErr();
+    uint32_t  floatToParam(float);
 
   private:
     // Configuration
-    uint32_t _p, _i, _d;
-    uint32_t _db;
-    int64_t _outmax, _outmin;
+    uint32_t  _p, _i, _d;
+    int64_t   _outmax, _outmin;
 
     // State
-    int16_t _last_sp, _last_out;
-    int32_t _sum, _last_err;
-    uint32_t _last_run;
-    int64_t _ctl;
-    bool _cfg_err;
+    int16_t   _last_sp, _last_out;
+    int32_t   _sum, _last_err;
+    uint32_t  _last_run;
+    int64_t   _ctl;
+    bool      _cfg_err;
 };
 
 #endif /* FastPID_H */
