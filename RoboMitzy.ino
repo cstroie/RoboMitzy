@@ -4,7 +4,7 @@
   Copyright 2017 Costin STROIE <costinstroie@eridu.eu.org>
 */
 
-#define DEBUG
+//#define DEBUG
 
 #define BENCH_COUNT 10000
 
@@ -40,7 +40,7 @@ void snsCalibrate() {
 #ifdef DEBUG
   Serial.println(F("Calibration"));
 #endif
-  while (SNS.calibrate()) {
+  while (not SNS.calibrate()) {
 #ifdef DEBUG
     // Show partial results
     Serial.print(F("Clb "));
@@ -135,17 +135,19 @@ void setup() {
   Serial.println("RoboMitzy");
 
   // Initialize the analog line sensors
-  SNS.init(4);
+  SNS.init(3);
   // Calibrate and validate the sensors
   snsCalibrate();
   // Force a positive polarity
   SNS.polarity = true;
 
+  delay(5000);
+
   // Initialize the motors, setting the minimum and maximum speed
-  M.init(60, 100);
+  M.init(40, 70);
 
   // Configure the PID controller
-  PID.configure(1.1, 0.2, 0.1, 16, true);
+  PID.configure(1.5, 0, 0, 16, true);
 }
 
 /**
@@ -157,15 +159,16 @@ void loop() {
     // Get the line position
     int16_t pos = SNS.getPosition();
     // If the robot has been lifted, stop the motors
-    if (SNS.onFloor()) {
+    if (SNS.onFloor() && SNS.onLine()) {
       // Get the controller correction
       int16_t stp = PID.step(-pos, 0);
       // Adjust the motors
       M.drive(M.maxSpeed, stp >> 8);
-
+#ifdef DEBUG
       Serial.print(pos >> 8);
       Serial.print(",");
       Serial.println(stp >> 8);
+#endif
     }
     else {
       M.stop();

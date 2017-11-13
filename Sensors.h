@@ -12,7 +12,7 @@
 #define CHANNELS      8    // Number of ADC channels
 #define HST_SIZE      16   // Histogram size
 
-#define THRESHOLD     0xC0
+#define THRESHOLD     0x70
 
 #define MUX_DELAY_US  50
 #define CALC_DELAY_US 13
@@ -40,6 +40,7 @@ class Sensors {
     void    reset();
     bool    getPolarity();
     bool    onFloor();          // Check if the robot has been lifted up
+    bool    onLine();           // Check if the robot is on line
 
 
     uint8_t chnRaw[CHANNELS];   // Raw analog channel readings
@@ -49,7 +50,7 @@ class Sensors {
     uint8_t chnVal[CHANNELS];   // Calibrated channel analog value
 
     // Channel weights: (x/10)^n, n=0..3, x<=6
-    int16_t chnWht = 1.6 * FP_ONE;
+    int16_t chnWht = 2.5 * FP_ONE;
     int16_t chnCff[CHANNELS];   // Channel coefficients, computed at runtime
 
 

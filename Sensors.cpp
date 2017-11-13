@@ -221,6 +221,19 @@ bool Sensors::onFloor() {
 }
 
 /**
+  Detect if the robot is on line
+*/
+bool Sensors::onLine() {
+  bool line = false;
+  for (uint8_t c = 0; c < CHANNELS; c++)
+    if (chnRaw[c] > ((chnMax[c] - chnMin[c]) >> 1)) {
+      line = true;
+      break;
+    }
+  return line;
+}
+
+/**
   Get the line position for the PID controller (>675us)
 */
 int16_t Sensors::getPosition() {
