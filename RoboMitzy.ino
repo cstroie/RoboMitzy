@@ -4,7 +4,7 @@
   Copyright 2017 Costin STROIE <costinstroie@eridu.eu.org>
 */
 
-//#define DEBUG
+#define DEBUG
 
 #define BENCH_COUNT 10000
 
@@ -16,6 +16,8 @@
 Sensors SNS;
 FastPID PID;
 Motors  M;
+
+uint8_t lastRun;  // The last time the loop ran
 
 int16_t benchmark() {
   int16_t result;
@@ -133,49 +135,53 @@ void setup() {
   Serial.println("RoboMitzy");
 
   // Initialize the analog line sensors
-  SNS.init(3);
+  SNS.init(4);
   // Calibrate and validate the sensors
   snsCalibrate();
+  // Force a positive polarity
+  SNS.polarity = true;
+
+  // Initialize the motors, setting the minimum and maximum speed
+  M.init(60, 100);
 
   // Configure the PID controller
-  PID.configure(1, 0.1, 0.5, 0, 16, true);
-
-  // Initialize the motors
-  M.init();
-  //M.run(60, true, 60, true);
-  //M.run(160, 90);
-  //M.stop();
-  /*
-    while (true) {
-    for (int i = -120; i < 120; i++) {
-      M.run(130, i);
-      delay(10);
-    }
-    }
-  */
+  PID.configure(1.1, 0.2, 0.1, 16, true);
 }
 
 /**
   Main Arduino loop
 */
 void loop() {
-  // Get the line position
-  int16_t pos = SNS.getPosition();
-  // Get the controller correction
-  int16_t stp = PID.step(-pos, 0);
-  // Adjust the motors
-  M.drive(160, stp >> 8);
+  // Run at most once per millisecond
+  if ((uint8_t)(millis() & 0xFF) != lastRun) {
+    // Get the line position
+    int16_t pos = SNS.getPosition();
+    // If the robot has been lifted, stop the motors
+    if (SNS.onFloor()) {
+      // Get the controller correction
+      int16_t stp = PID.step(-pos, 0);
+      // Adjust the motors
+      M.drive(M.maxSpeed, stp >> 8);
 
-  /*
-    for (uint8_t c = 0; c < CHANNELS; c++) {
-      Serial.print(SNS.chnRaw[c]);
-      //Serial.print(SNS.chnVal[c]);
+      Serial.print(pos >> 8);
       Serial.print(",");
+      Serial.println(stp >> 8);
     }
-  */
-  Serial.print(pos >> 8);
-  Serial.print(",");
-  Serial.println(stp >> 8);
+    else {
+      M.stop();
+    }
 
-  delay(100);
+    /*
+      for (uint8_t c = 0; c < CHANNELS; c++) {
+        Serial.print(SNS.chnRaw[c]);
+        //Serial.print(SNS.chnVal[c]);
+        Serial.print(",");
+      }
+    */
+
+    // Keep the last byte of millis()
+    lastRun = millis() & 0xFF;
+  }
+
+  //delay(20);
 }

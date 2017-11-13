@@ -20,6 +20,7 @@ class Motors {
   public:
     Motors();
     void init();
+    void init(uint8_t min_speed, uint8_t max_speed);
 
     void left(uint8_t speed, bool dir);
     void right(uint8_t speed, bool dir);
@@ -29,7 +30,7 @@ class Motors {
     void stop(bool br = false);
 
     uint8_t minSpeed = 60;
-    uint8_t maxSpeed = 255;
+    uint8_t maxSpeed = 160;
 };
 
 #endif /* MOTORS_H */
