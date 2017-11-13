@@ -170,8 +170,6 @@ void Sensors::reset() {
   // Reset the polarity histogram
   for (uint8_t i = 0; i < HST_SIZE; i++)
     polHst[i] = 0;
-  // Lifted bit
-  lifted = true;
 }
 
 /**
@@ -210,15 +208,25 @@ void Sensors::coeff() {
 }
 
 /**
+  Detect if the robot is on floor or it has been lifted up
+*/
+bool Sensors::onFloor() {
+  bool proximity = false;
+  for (uint8_t c = 0; c < CHANNELS; c++)
+    if (chnRaw[c] < 0xF0) {
+      proximity = true;
+      break;
+    }
+  return proximity;
+}
+
+/**
   Get the line position for the PID controller (>675us)
 */
 int16_t Sensors::getPosition() {
   int32_t result = 0;
   // Read the sensors (>540us)
   readAllChannels();
-  // Detect if the robot has been lifted up
-  for (uint8_t c = 0; c < CHANNELS; c++)
-    if (chnRaw[c] < 0xF0) lifted = false; // 94%
   // Compute the line position using the relative values and
   // the channels coefficients, Q24.8 (150us)
   if (polarity) {
