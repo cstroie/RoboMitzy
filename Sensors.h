@@ -55,7 +55,8 @@ class Sensors {
     uint8_t chnTst[CHANNELS] = {255, 255, 242, 13, 15, 248, 255, 254};
 
 
-    bool polarity;              // Surface polarity (white/black, black/white)
+    bool lifted   = true;       // Check if the robot has been lifted up
+    bool polarity = true;       // Surface polarity (black/white, white/black)
     uint16_t polHst[HST_SIZE];  // Polarity histogram
 
   private:

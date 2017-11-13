@@ -33,7 +33,7 @@ void Sensors::init(uint8_t pin) {
   ledOnIR();
   // Calibration reset
   reset();
-  // Compute position coefficients
+  // Compute the position coefficients
   coeff();
 }
 
@@ -170,6 +170,8 @@ void Sensors::reset() {
   // Reset the polarity histogram
   for (uint8_t i = 0; i < HST_SIZE; i++)
     polHst[i] = 0;
+  // Lifted bit
+  lifted = true;
 }
 
 /**
@@ -208,18 +210,26 @@ void Sensors::coeff() {
 }
 
 /**
-  Get the line position for the PID controller (675us)
+  Get the line position for the PID controller (>675us)
 */
 int16_t Sensors::getPosition() {
   int32_t result = 0;
-  // Read the sensors (540us)
+  // Read the sensors (>540us)
   readAllChannels();
+  // Detect if the robot has been lifted up
+  for (uint8_t c = 0; c < CHANNELS; c++)
+    if (chnRaw[c] < 0xF0) lifted = false; // 94%
   // Compute the line position using the relative values and
   // the channels coefficients, Q24.8 (150us)
-  //if (polarity) {
-  for (uint8_t c = 0; c < CHANNELS; c++)
-    result += ((fpd_t)((fp_t)chnVal[c] << FP_FBITS) * (fpd_t)chnCff[c]) >> FP_FBITS;
-  //}
+  if (polarity) {
+    // Black on white
+    for (uint8_t c = 0; c < CHANNELS; c++)
+      result += ((fpd_t)((fp_t)chnVal[c] << FP_FBITS) * (fpd_t)chnCff[c]) >> FP_FBITS;
+  }
+  else {
+    for (uint8_t c = 0; c < CHANNELS; c++)
+      result += ((fpd_t)((fp_t)(255 - chnVal[c]) << FP_FBITS) * (fpd_t)chnCff[c]) >> FP_FBITS;
+  }
 
   // Return the result
   return result >> FP_FBITS;
