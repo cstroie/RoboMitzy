@@ -29,7 +29,7 @@ class Motors {
     void stop(bool br = false);
 
     uint8_t minSpeed = 60;
-    uint8_t maxSpeed = 255;
+    uint8_t maxSpeed = 160;
 };
 
 #endif /* MOTORS_H */

@@ -83,16 +83,18 @@ void Motors::run(uint8_t speed, int8_t turn) {
 
 /**
   Control the motors by speed and turn, only slowing down one wheel.
+  Positive speed is forward, negatve is backward.
   Positive turn is to the right, negative to the left.
   Only forward running.
 */
 void Motors::drive(int8_t speed, int8_t turn) {
   // Speed and turn in absolute values
-  uint8_t aspeed = abs(speed);
-  uint8_t aturn = abs(turn);
-  // The fast and the slow wheels
-  uint8_t fast = aspeed == 0x80 ? 0xFF : aspeed << 1;
-  uint8_t slow = aspeed > aturn ? ((aspeed - aturn) << 1) : 0;
+  uint8_t aspeed = speed == -128 ? 0xFF : (abs(speed) << 1);
+  uint8_t aturn  = turn  == -128 ? 0xFF : (abs(turn)  << 1);
+  // Relative speed and turn
+  uint16_t range = maxSpeed - minSpeed;
+  uint8_t fast = minSpeed + ((range * aspeed) >> 8);
+  uint8_t slow = fast - ((range * aturn) >> 8);
   // Run the motors
   if      (turn > 0)  run(fast, true, slow, true);
   else if (turn < 0)  run(slow, true, fast, true);
