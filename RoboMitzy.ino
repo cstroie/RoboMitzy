@@ -141,11 +141,11 @@ void setup() {
   // Force a positive polarity
   SNS.polarity = true;
 
+  // Initialize the motors, setting the minimum and maximum speed
+  M.init(60, 100);
+
   // Configure the PID controller
   PID.configure(1.1, 0.2, 0.1, 16, true);
-
-  // Initialize the motors
-  M.init();
 }
 
 /**

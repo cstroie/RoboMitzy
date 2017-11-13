@@ -20,6 +20,7 @@ class Motors {
   public:
     Motors();
     void init();
+    void init(uint8_t min_speed, uint8_t max_speed);
 
     void left(uint8_t speed, bool dir);
     void right(uint8_t speed, bool dir);

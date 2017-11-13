@@ -24,6 +24,12 @@ void Motors::init() {
   pinMode(M2A, OUTPUT); pinMode(M2B, OUTPUT);
 }
 
+void Motors::init(uint8_t min_speed, uint8_t max_speed) {
+  minSpeed = min_speed;
+  maxSpeed = max_speed;
+  init();
+}
+
 /**
   Left motor control
 */
