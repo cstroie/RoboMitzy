@@ -133,7 +133,7 @@ void setup() {
   Serial.println("RoboMitzy");
 
   // Initialize the analog line sensors
-  SNS.init(3);
+  SNS.init(4);
   // Calibrate and validate the sensors
   snsCalibrate();
 
