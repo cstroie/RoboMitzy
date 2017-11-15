@@ -12,7 +12,7 @@
 #define CHANNELS      8    // Number of ADC channels
 #define HST_SIZE      16   // Histogram size
 
-#define THRESHOLD     0x70
+#define THRESHOLD     0x80
 
 #define MUX_DELAY_US  50
 #define CALC_DELAY_US 13
@@ -31,9 +31,9 @@ class Sensors {
     uint8_t readChannel(uint8_t channel);
     void    setChannel(uint8_t channel);
     uint8_t readRaw();
+
     bool    calibrate();
-    void    calcRelative(uint8_t channel);
-    void    coeff();
+    bool    calibrated;
 
     int16_t getPosition();
 
@@ -47,16 +47,12 @@ class Sensors {
     uint8_t chnMax[CHANNELS];   // Maximum read value during calibration
     uint8_t chnMin[CHANNELS];   // Minimum read value during calibration
     uint8_t chnRng[CHANNELS];   // Channel range: max - min, precalculated
-    uint8_t chnVal[CHANNELS];   // Calibrated channel analog value
-
-    // Channel weights: (x/10)^n, n=0..3, x<=6
-    int16_t chnWht = 2.5 * FP_ONE;
-    int16_t chnCff[CHANNELS];   // Channel coefficients, computed at runtime
-
+    uint8_t chnThr[CHANNELS];   // Channel threshohld
+    uint8_t chnVal[CHANNELS];   // Calibrated channel digital value
 
     uint8_t chnTst[CHANNELS] = {255, 255, 242, 13, 15, 248, 255, 254};
 
-    bool polarity = true;       // Surface polarity (black/white, white/black)
+    bool    polarity = true;    // Surface polarity (black/white, white/black)
     uint16_t polHst[HST_SIZE];  // Polarity histogram
 
   private:

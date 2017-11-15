@@ -4,7 +4,7 @@
   Copyright 2017 Costin STROIE <costinstroie@eridu.eu.org>
 */
 
-//#define DEBUG
+#define DEBUG
 
 #define BENCH_COUNT 10000
 
@@ -58,7 +58,7 @@ void snsCalibrate() {
   SNS.getPolarity();
 #ifdef DEBUG
   Serial.println();
-  Serial.println(F("Channel Min/Max Rng"));
+  Serial.println(F("Channel Min/Max Rng Thr"));
   // Show the results
   for (uint8_t c = 0; c < CHANNELS; c++) {
     Serial.print(F("Ch"));
@@ -70,6 +70,8 @@ void snsCalibrate() {
     Serial.print(SNS.chnMax[c]);
     Serial.print(" ");
     Serial.print(SNS.chnRng[c]);
+    Serial.print(" ");
+    Serial.print(SNS.chnThr[c]);
     Serial.println();
   }
   // Show the polarity
@@ -87,44 +89,47 @@ void snsCalibrate() {
 #endif
 }
 
+/**
+  Try an auto-calibration
+*/
+bool autoCalibrate(uint32_t howlong) {
+  bool valid = true;
+  bool right = true;
+  uint32_t now = millis();
+  uint32_t stop1 = now + (howlong >> 2);
+  uint32_t stop2 = stop1 + (howlong >> 1);
+  uint32_t stop3 = now + howlong;
 
-void snsRead() {
-  uint32_t timeDelay, timeStop;
-  uint32_t count = 0;
-  uint16_t error;
-
-  // Read the sensors, calibrated
-  timeDelay = 2000UL;
-  timeStop = millis() + timeDelay;
-  while (millis() < timeStop) {
-    SNS.readAllChannels();
-    //error = SNS.getError();
-    //SNS.calcRelative(0);
-    count++;
+  while (true) {
+    // Keep the time for compares
+    now = millis();
+    if (now > stop3)
+      // Time's up
+      break;
+    else if ((now <= stop1 or now > stop2) and right) {
+      // Rotate left
+      M.run(255, false, 255, true);
+      right = false;
+#ifdef DEBUG
+      Serial.print(F(" left"));
+#endif
+    }
+    else if ((now > stop1 and now <= stop2) and (not right)) {
+      // Rotate right
+      M.run(255, true, 255, false);
+      right = true;
+#ifdef DEBUG
+      Serial.print(F(" right"));
+#endif
+    }
+    // Calibrate
+    valid = SNS.calibrate();
   }
 #ifdef DEBUG
-  Serial.print(F("Calib. read 8ch: "));
-  Serial.print(1000UL * timeDelay / count);
-  Serial.println(F("us"));
-  Serial.println(count);
-  Serial.print(F("PID error  : "));
-  Serial.println(error);
+  if (valid) Serial.println(F(" done!"));
+  else       Serial.println(F(" failed"));
 #endif
-
-#ifdef DEBUG
-  Serial.println(F("Channel reading:"));
-  // Show the calibrated readings
-  for (uint8_t c = 0; c < CHANNELS; c++) {
-    Serial.print(F("Ch"));
-    if (c < 10) Serial.print(" ");
-    Serial.print(c);
-    Serial.print(" ");
-    Serial.print(SNS.chnVal[c]);
-    Serial.print(",");
-    Serial.print(SNS.chnRng[c]);
-    Serial.println();
-  }
-#endif
+  return valid;
 }
 
 /**
@@ -132,22 +137,51 @@ void snsRead() {
 */
 void setup() {
   Serial.begin(115200);
-  Serial.println("RoboMitzy");
+  Serial.println(F("RoboMitzy"));
 
   // Initialize the analog line sensors
   SNS.init(3);
-  // Calibrate and validate the sensors
-  snsCalibrate();
+  // Initialize the motors, setting the minimum and maximum speed
+  M.init(40, 70);
+  // Calibrate and validate the sensors for one second,
+  // repeat four times if not valid
+  for (uint8_t c = 1; c <= 4; c++) {
+    Serial.print(F("Calibration "));
+    Serial.print(c);
+    if (autoCalibrate(1000)) break;
+  }
+#ifdef DEBUG
+  Serial.println();
+  Serial.println(F("Channel Min/Max Rng Thr"));
+  // Show the results
+  for (uint8_t c = 0; c < CHANNELS; c++) {
+    Serial.print(F("Ch"));
+    if (c < 10) Serial.print(" ");
+    Serial.print(c);
+    Serial.print(" ");
+    Serial.print(SNS.chnMin[c]);
+    Serial.print("/");
+    Serial.print(SNS.chnMax[c]);
+    Serial.print(" ");
+    Serial.print(SNS.chnRng[c]);
+    Serial.print(" ");
+    Serial.print(SNS.chnThr[c]);
+    Serial.println();
+  }
+#endif
+  // If not calibrated, halt
+  if (not SNS.calibrated) while (true);
+
   // Force a positive polarity
   SNS.polarity = true;
 
+  // Wait a bit
   delay(5000);
-
-  // Initialize the motors, setting the minimum and maximum speed
-  M.init(40, 70);
 
   // Configure the PID controller
   PID.configure(1.5, 0, 0, 16, true);
+
+  //while (true) benchmark();
 }
 
 /**
@@ -164,8 +198,13 @@ void loop() {
       int16_t stp = PID.step(-pos, 0);
       // Adjust the motors
       M.drive(M.maxSpeed, stp >> 8);
+
 #ifdef DEBUG
-      Serial.print(pos >> 8);
+      // Show the results
+      for (uint8_t c = 0; c < CHANNELS; c++)
+        Serial.print(SNS.chnVal[c]);
+      Serial.print(" ");
+      Serial.print(pos);
       Serial.print(",");
       Serial.println(stp >> 8);
 #endif
@@ -186,5 +225,5 @@ void loop() {
     lastRun = millis() & 0xFF;
   }
 
-  //delay(20);
+  delay(20);
 }

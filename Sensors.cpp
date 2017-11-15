@@ -33,8 +33,6 @@ void Sensors::init(uint8_t pin) {
   ledOnIR();
   // Calibration reset
   reset();
-  // Compute the position coefficients
-  coeff();
 }
 
 /**
@@ -52,15 +50,15 @@ void Sensors::ledOffIR() {
 }
 
 /**
-  Read the channels; needs 542us (537us) at 16MHz
+  Read the channels (518us)
 */
 void Sensors::readAllChannels() {
-  // Read each channel, while computing the relative values for all
-  // but the last, then compute for the last
-  for (uint8_t c = 0; c < CHANNELS; c++)
+  // Read each channel, while computing the digital value
+  for (uint8_t c = 0; c < CHANNELS; c++) {
     chnRaw[c] = readChannel(c);
-  // Compute the relative value for the last channel
-  calcRelative(CHANNELS - 1);
+    if (chnRaw[c] > chnThr[c])  chnVal[c] = true;
+    else                        chnVal[c] = false;
+  }
 }
 
 /**
@@ -74,16 +72,7 @@ uint8_t Sensors::readChannel(uint8_t channel) {
   // Set the MUX
   setChannel(channel);
   // Wait for voltage to settle after changing the MUX
-  if (channel == 0) {
-    // Can not compute anything for the first channel, just wait
-    delayMicroseconds(MUX_DELAY_US);
-  }
-  else {
-    // Compute the relative value of the previous channel
-    calcRelative(channel - 1);
-    // Then wait some more...
-    delayMicroseconds(MUX_DELAY_US - CALC_DELAY_US);
-  }
+  delayMicroseconds(MUX_DELAY_US);
   // Read the channel
   return readRaw();
 }
@@ -113,24 +102,11 @@ uint8_t Sensors::readRaw() {
 }
 
 /**
-  Calculate the relative sensor value; needs 13us at 16MHz
-*/
-void Sensors::calcRelative(uint8_t channel) {
-  // Upscale to 16 bits
-  uint16_t y = chnRaw[channel];
-  // Constrain the raw value inside the calibrated interval
-  constrain(y, chnMin[channel], chnMax[channel]);
-  // Do the integer math
-  y -= chnMin[channel];
-  chnVal[channel] = (uint8_t)((y << 8) / ((uint16_t)chnRng[channel] + 1));
-}
-
-/**
   Read the channels, update the minimum and maximum, compute the sensor
-  range, validate the sensors and collect data for histogram
+  range and threshold, validate the sensors and collect data for histogram
 */
 bool Sensors::calibrate() {
-  bool valid = true;
+  calibrated = true;
   for (uint8_t c = 0; c < CHANNELS; c++) {
     // Set the MUX
     setChannel(c);
@@ -142,30 +118,35 @@ bool Sensors::calibrate() {
     if (chnRaw[c] > chnMax[c]) chnMax[c] = chnRaw[c];
     // Get the sensor range
     chnRng[c] = chnMax[c] - chnMin[c];
-    // The range should be greater than 3/4 of the sensor definition
-    if (chnRng[c] < THRESHOLD) valid = false;
+    // The range should be greater the specified THRESHOLD
+    if (chnRng[c] < THRESHOLD) calibrated = false;
+    // Get each sensor threshold
+    chnThr[c] = chnMin[c] + (chnRng[c] >> 1);
   }
   // Collect data for polarity histogram if readings are valid
-  if (valid) {
+  if (calibrated) {
     for (uint8_t c = 0; c < CHANNELS; c++) {
       // Get the histogram index
       uint8_t idx = (chnRaw[c] >> 4);
       polHst[idx]++;
     }
   }
-  return valid;
+  return calibrated;
 }
 
 /**
   Calibration and polarity histogram reset
 */
 void Sensors::reset() {
+  // Reset the calibration
+  calibrated = false;
   // Reset the channels calibration
   for (uint8_t c = 0; c < CHANNELS; c++) {
     chnRaw[c] = 0x00;
     chnMin[c] = 0xFF;
     chnMax[c] = 0x00;
     chnRng[c] = 0x00;
+    chnThr[c] = 0xFF;
   }
   // Reset the polarity histogram
   for (uint8_t i = 0; i < HST_SIZE; i++)
@@ -195,25 +176,12 @@ bool Sensors::getPolarity() {
 }
 
 /**
-  Compute the position coefficients in Q24.8
-*/
-void Sensors::coeff() {
-  int32_t x = FP_ONE;
-  for (uint8_t c = 0; c < (CHANNELS / 2); c++) {
-    chnCff[CHANNELS / 2 - c - 1]  = -x;
-    chnCff[CHANNELS / 2 + c]      =  x;
-    x = (int32_t)(((int64_t)x * (int64_t)chnWht + FP_ONE) >> FP_FBITS);
-  }
-  //for (uint8_t c = 0; c < CHANNELS; c++) Serial.println(chnCff[c]);
-}
-
-/**
   Detect if the robot is on floor or it has been lifted up
 */
 bool Sensors::onFloor() {
   bool proximity = false;
   for (uint8_t c = 0; c < CHANNELS; c++)
-    if (chnRaw[c] < 0xF0) {
+    if (not chnVal[c]) {
       proximity = true;
       break;
     }
@@ -226,7 +194,7 @@ bool Sensors::onFloor() {
 bool Sensors::onLine() {
   bool line = false;
   for (uint8_t c = 0; c < CHANNELS; c++)
-    if (chnRaw[c] > ((chnMax[c] - chnMin[c]) >> 1)) {
+    if (chnVal[c]) {
       line = true;
       break;
     }
@@ -234,25 +202,25 @@ bool Sensors::onLine() {
 }
 
 /**
-  Get the line position for the PID controller (>675us)
+  Get the line position for the PID controller (530us)
 */
 int16_t Sensors::getPosition() {
-  int32_t result = 0;
-  // Read the sensors (>540us)
+  int8_t result = 0;
+  // Read the sensors
   readAllChannels();
-  // Compute the line position using the relative values and
-  // the channels coefficients, Q24.8 (150us)
+  // Compute the line position using the digital values
+  uint8_t chnHalf = CHANNELS >> 1;
   if (polarity) {
     // Black on white
-    for (uint8_t c = 0; c < CHANNELS; c++)
-      result += ((fpd_t)((fp_t)chnVal[c] << FP_FBITS) * (fpd_t)chnCff[c]) >> FP_FBITS;
+    for (uint8_t c = 0; c < chnHalf; c++)
+      result += (chnVal[c + chnHalf] - chnVal[chnHalf - c - 1]) << c;
   }
   else {
-    for (uint8_t c = 0; c < CHANNELS; c++)
-      result += ((fpd_t)((fp_t)(255 - chnVal[c]) << FP_FBITS) * (fpd_t)chnCff[c]) >> FP_FBITS;
+    // White on black
+    for (uint8_t c = 0; c < chnHalf; c++)
+      result += (chnVal[chnHalf - c - 1] - chnVal[c + chnHalf]) << c;
   }
-
   // Return the result
-  return result >> FP_FBITS;
+  return result;
 }
 
