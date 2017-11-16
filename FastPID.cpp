@@ -23,7 +23,6 @@ void FastPID::clear() {
   _sum      = 0;
   _last_err = 0;
   _last_run = 0;
-  _ctl      = 0;
   _cfg_err  = false;
 }
 
@@ -40,8 +39,9 @@ bool FastPID::configure(float kp, float ki, float kd, int bits, bool sign) {
     _cfg_err = true;
   else {
     if (sign) {
+      // Symmetry
       _outmax =  ((0x1ULL << (bits - 1)) - 1) * PARAM_MULT;
-      _outmin = -((0x1ULL << (bits - 1))) * PARAM_MULT;
+      _outmin = -((0x1ULL << (bits - 1)) - 1) * PARAM_MULT;
     }
     else {
       _outmax = ((0x1ULL << bits) - 1) * PARAM_MULT;
@@ -72,7 +72,7 @@ int16_t FastPID::step(int16_t sp, int16_t fb) {
   if (_last_run != 0) {
     // 47-day timebomb
     if (now < _last_run)  hz = uint32_t(1000) / (now + (~_last_run));
-    else                  hz = uint32_t(1000) / (now - _last_run);
+    else                  hz = uint32_t(1000) / (now -   _last_run);
     if (hz == 0)          hz = 1;
   }
 
@@ -112,18 +112,15 @@ int16_t FastPID::step(int16_t sp, int16_t fb) {
   // int39 (P) + int54 (I) + int58 (D) = int61
   int64_t diff = P + I + D;
 
-  // int62 (ctl) + int61 = int63
-  _ctl += diff;
-
   // Make the output saturate
-  if      (_ctl > _outmax)  _ctl = _outmax;
-  else if (_ctl < _outmin)  _ctl = _outmin;
+  if      (diff > _outmax)  diff = _outmax;
+  else if (diff < _outmin)  diff = _outmin;
 
   // Remove the integer scaling factor.
-  int16_t out = _ctl >> PARAM_SHIFT;
+  int16_t out = diff >> PARAM_SHIFT;
 
   // Fair rounding.
-  if (_ctl & (0x1ULL << (PARAM_SHIFT - 1)))
+  if (diff & (0x1ULL << (PARAM_SHIFT - 1)))
     out++;
 
   return out;

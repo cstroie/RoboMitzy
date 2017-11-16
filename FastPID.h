@@ -19,7 +19,7 @@
 #define INTEG_MAX    (INT32_MAX >> 1)
 #define INTEG_MIN    (INT32_MIN >> 1)
 
-#define PARAM_SHIFT  23
+#define PARAM_SHIFT  20
 #define PARAM_BITS   25
 #define PARAM_MAX    (((0x1ULL << PARAM_BITS)-1) >> PARAM_SHIFT)
 #define PARAM_MULT   (((0x1ULL << PARAM_BITS)-1) >> (PARAM_BITS - PARAM_SHIFT))
@@ -59,7 +59,6 @@ class FastPID {
     int16_t   _last_sp, _last_out;
     int32_t   _sum, _last_err;
     uint32_t  _last_run;
-    int64_t   _ctl;
     bool      _cfg_err;
 };
 
