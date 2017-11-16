@@ -33,6 +33,8 @@ void Sensors::init(uint8_t pin) {
   ledOnIR();
   // Calibration reset
   reset();
+  // Compute the position coefficients
+  coeff();
 }
 
 /**
@@ -56,6 +58,7 @@ void Sensors::readAllChannels() {
   // Read each channel, while computing the digital value
   for (uint8_t c = 0; c < CHANNELS; c++) {
     chnRaw[c] = readChannel(c);
+    //chnRaw[c] = chnTst[c];
     if (chnRaw[c] > chnThr[c])  chnVal[c] = true;
     else                        chnVal[c] = false;
   }
@@ -176,6 +179,20 @@ bool Sensors::getPolarity() {
 }
 
 /**
+  Compute the position coefficients in Q23.8
+*/
+void Sensors::coeff() {
+  int32_t x = FP_ONE;
+  uint8_t chnHalf = CHANNELS >> 1;
+  for (uint8_t c = 0; c < chnHalf; c++) {
+    chnCff[chnHalf + c]      =  -x;
+    chnCff[chnHalf - c - 1]  =   x;
+    x = (int32_t)(((int64_t)x * (int64_t)chnWht) >> FP_FBITS);
+  }
+  //for (uint8_t c = 0; c < CHANNELS; c++) Serial.println(chnCff[c]);
+}
+
+/**
   Detect if the robot is on floor or it has been lifted up
 */
 bool Sensors::onFloor() {
@@ -202,24 +219,18 @@ bool Sensors::onLine() {
 }
 
 /**
-  Get the line position for the PID controller (530us)
+  Get the line position for the PID controller
 */
 int16_t Sensors::getPosition() {
-  int8_t result = 0;
+  int16_t result = 0;
   // Read the sensors
   readAllChannels();
-  // Compute the line position using the digital values
-  uint8_t chnHalf = CHANNELS >> 1;
-  if (polarity) {
-    // Black on white
-    for (uint8_t c = 0; c < chnHalf; c++)
-      result += (chnVal[c + chnHalf] - chnVal[chnHalf - c - 1]) << c;
-  }
-  else {
-    // White on black
-    for (uint8_t c = 0; c < chnHalf; c++)
-      result += (chnVal[chnHalf - c - 1] - chnVal[c + chnHalf]) << c;
-  }
+  // Compute the line position using the digital values and
+  // the channels coefficients, Q23.8
+  for (uint8_t c = 0; c < CHANNELS; c++)
+    if (chnVal[c]) result += chnCff[c];
+  // Reverse the polarity
+  if (not polarity) result = -result;
   // Return the result
   return result;
 }

@@ -35,13 +35,13 @@ class Sensors {
     bool    calibrate();
     bool    calibrated;
 
+    void    coeff();
     int16_t getPosition();
 
     void    reset();
     bool    getPolarity();
     bool    onFloor();          // Check if the robot has been lifted up
     bool    onLine();           // Check if the robot is on line
-
 
     uint8_t chnRaw[CHANNELS];   // Raw analog channel readings
     uint8_t chnMax[CHANNELS];   // Maximum read value during calibration
@@ -50,13 +50,18 @@ class Sensors {
     uint8_t chnThr[CHANNELS];   // Channel threshohld
     uint8_t chnVal[CHANNELS];   // Calibrated channel digital value
 
-    uint8_t chnTst[CHANNELS] = {255, 255, 242, 13, 15, 248, 255, 254};
+    // Channel weights: x * 2^n, n=0..3, x<=4.63
+    int16_t chnWht = 2 * FP_ONE;
+    int16_t chnCff[CHANNELS];   // Channel coefficients, computed at runtime
 
     bool    polarity = true;    // Surface polarity (black/white, white/black)
     uint16_t polHst[HST_SIZE];  // Polarity histogram
 
   private:
     uint8_t pinIR;
+
+    // Test values
+    uint8_t chnTst[CHANNELS] = {80, 0, 0, 0, 0, 0, 0, 0};
 };
 
 #endif /* SENSORS_H */

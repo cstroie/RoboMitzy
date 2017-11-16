@@ -4,7 +4,7 @@
   Copyright 2017 Costin STROIE <costinstroie@eridu.eu.org>
 */
 
-#define DEBUG
+//#define DEBUG
 
 #define BENCH_COUNT 10000
 
@@ -146,9 +146,11 @@ void setup() {
   // Calibrate and validate the sensors for one second,
   // repeat four times if not valid
   for (uint8_t c = 1; c <= 4; c++) {
+#ifdef DEBUG
     Serial.print(F("Calibration "));
     Serial.print(c);
-    if (autoCalibrate(1000)) break;
+#endif
+    if (autoCalibrate(800)) break;
   }
 #ifdef DEBUG
   Serial.println();
@@ -179,7 +181,7 @@ void setup() {
   delay(5000);
 
   // Configure the PID controller
-  PID.configure(1.5, 0, 0, 16, true);
+  PID.configure(2, 0, 0, 16, true);
 
   //while (true) benchmark();
 }
@@ -193,25 +195,24 @@ void loop() {
     // Get the line position
     int16_t pos = SNS.getPosition();
     // If the robot has been lifted, stop the motors
-    if (SNS.onFloor() && SNS.onLine()) {
+    if (SNS.onFloor()) {
       // Get the controller correction
       int16_t stp = PID.step(-pos, 0);
       // Adjust the motors
-      M.drive(M.maxSpeed, stp >> 8);
+      M.drive(127, stp >> 8);
 
 #ifdef DEBUG
       // Show the results
       for (uint8_t c = 0; c < CHANNELS; c++)
         Serial.print(SNS.chnVal[c]);
       Serial.print(" ");
-      Serial.print(pos);
+      Serial.print(pos >> 8);
       Serial.print(",");
       Serial.println(stp >> 8);
 #endif
     }
-    else {
+    else
       M.stop();
-    }
 
     /*
       for (uint8_t c = 0; c < CHANNELS; c++) {
@@ -225,5 +226,7 @@ void loop() {
     lastRun = millis() & 0xFF;
   }
 
+#ifdef DEBUG
   delay(20);
+#endif
 }

@@ -15,6 +15,7 @@
 #define M2B 8
 
 #include "Arduino.h"
+#include "FixedPoint.h"
 
 class Motors {
   public:

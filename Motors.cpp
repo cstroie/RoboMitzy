@@ -95,12 +95,12 @@ void Motors::run(uint8_t speed, int8_t turn) {
 */
 void Motors::drive(int8_t speed, int8_t turn) {
   // Speed and turn in absolute values
-  uint8_t aspeed = speed == -128 ? 0xFF : (abs(speed) << 1);
-  uint8_t aturn  = turn  == -128 ? 0xFF : (abs(turn)  << 1);
+  uint8_t aspeed = speed == -128 ? 0xFE : (abs(speed) << 1);
+  uint8_t aturn  = turn  == -128 ? 0xFE : (abs(turn)  << 1);
   // Relative speed and turn
   uint16_t range = maxSpeed - minSpeed;
-  uint8_t fast = minSpeed + ((range * aspeed) >> 8);
-  uint8_t slow = fast - ((range * aturn) >> 8);
+  uint8_t fast = minSpeed + ((range * aspeed + FP_HALF) >> FP_FBITS);
+  uint8_t slow = fast     - ((range * aturn  + FP_HALF) >> FP_FBITS);
   // Run the motors
   if      (turn > 0)  run(fast, true, slow, true);
   else if (turn < 0)  run(slow, true, fast, true);
