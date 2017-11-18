@@ -51,7 +51,7 @@ class Sensors {
     uint8_t chnVal[CHANNELS];   // Calibrated channel digital value
 
     // Channel weights: x * 2^n, n=0..3, x<=4.63
-    int16_t chnWht = 2 * FP_ONE;
+    int16_t chnWht = 4 * FP_ONE;
     int16_t chnCff[CHANNELS];   // Channel coefficients, computed at runtime
 
     bool    polarity = true;    // Surface polarity (black/white, white/black)

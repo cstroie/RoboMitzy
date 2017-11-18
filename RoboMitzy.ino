@@ -103,9 +103,11 @@ bool autoCalibrate(uint32_t howlong) {
   while (true) {
     // Keep the time for compares
     now = millis();
-    if (now > stop3)
+    if (now > stop3) {
       // Time's up
+      M.stop(true);
       break;
+    }
     else if ((now <= stop1 or now > stop2) and right) {
       // Rotate left
       M.run(255, false, 255, true);
@@ -142,7 +144,7 @@ void setup() {
   // Initialize the analog line sensors
   SNS.init(3);
   // Initialize the motors, setting the minimum and maximum speed
-  M.init(40, 70);
+  M.init(0, 40);
   // Calibrate and validate the sensors for one second,
   // repeat four times if not valid
   for (uint8_t c = 1; c <= 4; c++) {
@@ -150,7 +152,7 @@ void setup() {
     Serial.print(F("Calibration "));
     Serial.print(c);
 #endif
-    if (autoCalibrate(800)) break;
+    if (autoCalibrate(320)) break;
   }
 #ifdef DEBUG
   Serial.println();
@@ -181,7 +183,7 @@ void setup() {
   delay(5000);
 
   // Configure the PID controller
-  PID.configure(2, 0, 0, 16, true);
+  PID.configure(2.2, 0.04, 0.2, 16, true);
 
   //while (true) benchmark();
 }
@@ -197,7 +199,7 @@ void loop() {
     // If the robot has been lifted, stop the motors
     if (SNS.onFloor()) {
       // Get the controller correction
-      int16_t stp = PID.step(-pos, 0);
+      int16_t stp = PID.step(pos, 0);
       // Adjust the motors
       M.drive(127, stp >> 8);
 
@@ -227,6 +229,6 @@ void loop() {
   }
 
 #ifdef DEBUG
-  delay(20);
+  //delay(20);
 #endif
 }

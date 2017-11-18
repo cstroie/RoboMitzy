@@ -124,7 +124,7 @@ bool Sensors::calibrate() {
     // The range should be greater the specified THRESHOLD
     if (chnRng[c] < THRESHOLD) calibrated = false;
     // Get each sensor threshold
-    chnThr[c] = chnMin[c] + (chnRng[c] >> 1);
+    chnThr[c] = chnMin[c] + (chnRng[c] >> 2);
   }
   // Collect data for polarity histogram if readings are valid
   if (calibrated) {
