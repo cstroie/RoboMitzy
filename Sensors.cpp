@@ -124,7 +124,7 @@ bool Sensors::calibrate() {
     // The range should be greater the specified THRESHOLD
     if (chnRng[c] < THRESHOLD) calibrated = false;
     // Get each sensor threshold
-    chnThr[c] = chnMin[c] + (chnRng[c] >> 2);
+    chnThr[c] = chnMax[c] - (chnRng[c] >> 2);
   }
   // Collect data for polarity histogram if readings are valid
   if (calibrated) {
@@ -179,15 +179,15 @@ bool Sensors::getPolarity() {
 }
 
 /**
-  Compute the position coefficients in Q23.8
+  Compute the position coefficients in Q7.8
 */
 void Sensors::coeff() {
-  int32_t x = FP_ONE;
+  int16_t x = FP_ONE;
   uint8_t chnHalf = CHANNELS >> 1;
   for (uint8_t c = 0; c < chnHalf; c++) {
     chnCff[chnHalf + c]      =  -x;
     chnCff[chnHalf - c - 1]  =   x;
-    x = (int32_t)(((int64_t)x * (int64_t)chnWht) >> FP_FBITS);
+    x = x * chnWht;
   }
   //for (uint8_t c = 0; c < CHANNELS; c++) Serial.println(chnCff[c]);
 }
@@ -219,18 +219,25 @@ bool Sensors::onLine() {
 }
 
 /**
-  Get the line position for the PID controller
+  Get the line position for the PID controller, Q7.8
 */
 int16_t Sensors::getPosition() {
   int16_t result = 0;
+  uint8_t count  = 0;
   // Read the sensors
   readAllChannels();
   // Compute the line position using the digital values and
-  // the channels coefficients, Q23.8
+  // the channels coefficients, Q7.8
   for (uint8_t c = 0; c < CHANNELS; c++)
-    if (chnVal[c]) result += chnCff[c];
+    if (chnVal[c]) {
+      result += chnCff[c];
+      count++;
+    }
   // Reverse the polarity
   if (not polarity) result = -result;
+  // Get the average Q7.8 / Q8.0 = Q7.8
+  if (count > 0)  result = result / count;  // Average on line
+  else            result = 0;               // Off line!
   // Return the result
   return result;
 }

@@ -183,7 +183,8 @@ void setup() {
   delay(5000);
 
   // Configure the PID controller
-  PID.configure(2.2, 0.04, 0.2, 16, true);
+  uint8_t snsMaxWht = SNS.chnWht * SNS.chnWht * SNS.chnWht;
+  PID.configure(128 / snsMaxWht, 0.04, 0.2, 16, true);
 
   //while (true) benchmark();
 }
