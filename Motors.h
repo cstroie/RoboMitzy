@@ -30,6 +30,7 @@ class Motors {
     void drive(int8_t speed, int8_t turn);
     void stop(bool br = false);
 
+  private:
     uint8_t minSpeed = 60;
     uint8_t maxSpeed = 160;
 };
