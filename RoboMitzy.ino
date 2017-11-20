@@ -9,12 +9,12 @@
 #define BENCH_COUNT 10000
 
 #include "Sensors.h"
-#include "FastPID.h"
+#include "FPID.h"
 #include "Motors.h"
 
 
 Sensors SNS;
-FastPID PID;
+FPID    PID;
 Motors  M;
 
 uint8_t lastRun;  // The last time the loop ran
@@ -24,7 +24,7 @@ int16_t benchmark() {
   uint16_t count = BENCH_COUNT;
   uint32_t start = millis();
   while (count--)
-    result = SNS.getPosition();
+    result = PID.step(-2 << FP_FBITS);
   // Print the benchmark result
   Serial.print(F("Loop: "));
   Serial.print(1000UL * (millis() - start) / BENCH_COUNT);
@@ -174,19 +174,20 @@ void setup() {
   }
 #endif
   // If not calibrated, halt
-  if (not SNS.calibrated) while (true);
+  //if (not SNS.calibrated) while (true);
 
   // Force a positive polarity
   SNS.polarity = true;
 
   // Wait a bit
-  delay(5000);
+  //delay(5000);
 
   // Configure the PID controller
   uint8_t snsMaxWht = SNS.chnWht * SNS.chnWht * SNS.chnWht;
-  PID.configure(128 / snsMaxWht, 0.04, 0.2, 16, true);
+  //PID.init(128 / snsMaxWht, 0.04, 0.2);
+  PID.init(2, 0.04, 0.2);
 
-  //while (true) benchmark();
+  while (true) benchmark();
 }
 
 /**
@@ -200,7 +201,7 @@ void loop() {
     // If the robot has been lifted, stop the motors
     if (SNS.onFloor()) {
       // Get the controller correction
-      int16_t stp = PID.step(pos, 0);
+      int16_t stp = PID.step(pos);
       // Adjust the motors
       M.drive(127, stp >> 8);
 

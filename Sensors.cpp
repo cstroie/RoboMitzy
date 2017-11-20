@@ -219,7 +219,7 @@ bool Sensors::onLine() {
 }
 
 /**
-  Get the line position for the PID controller, Q7.8
+  Get the line position for the PID controller, Q7.8 (530us)
 */
 int16_t Sensors::getPosition() {
   int16_t result = 0;
