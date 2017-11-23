@@ -36,13 +36,15 @@ class Sensors {
     bool    calibrated;
 
     void    coeff();
-    int16_t getPosition();
+    int16_t getPosition();      // Compute the line position
+    int16_t linePosition;       // Last line position
+    bool    onLine;             // Check if the robot is on line
 
     void    reset();
     bool    getPolarity();
     bool    onFloor();          // Check if the robot has been lifted up
-    bool    onLine();           // Check if the robot is on line
 
+    // Channel readings, limits and computed values
     uint8_t chnRaw[CHANNELS];   // Raw analog channel readings
     uint8_t chnMax[CHANNELS];   // Maximum read value during calibration
     uint8_t chnMin[CHANNELS];   // Minimum read value during calibration
@@ -50,9 +52,9 @@ class Sensors {
     uint8_t chnThr[CHANNELS];   // Channel threshohld
     uint8_t chnVal[CHANNELS];   // Calibrated channel digital value
 
-    // Channel weights: x * 2^n, n=0..3, x<=4.63
-    int16_t chnWht = 2;
-    int16_t chnCff[CHANNELS];   // Channel coefficients, computed at runtime, Q7.8
+    // Channel weights: x * 2^n, n=0..3, x<=4.63 for Q7.8
+    float   chnWht = 1.2;
+    int32_t chnCff[CHANNELS];   // Channel coefficients, computed at runtime, Q23.8
 
     bool    polarity = true;    // Surface polarity (black/white, white/black)
     uint16_t polHst[HST_SIZE];  // Polarity histogram
@@ -61,7 +63,7 @@ class Sensors {
     uint8_t pinIR;
 
     // Test values
-    uint8_t chnTst[CHANNELS] = {80, 0, 0, 0, 0, 0, 0, 0};
+    uint8_t chnTst[CHANNELS] = {0x40, 0x40, 0, 0, 0, 0, 0, 0};
 };
 
 #endif /* SENSORS_H */

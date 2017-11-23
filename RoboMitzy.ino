@@ -24,7 +24,8 @@ int16_t benchmark() {
   uint16_t count = BENCH_COUNT;
   uint32_t start = millis();
   while (count--)
-    result = PID.step(-2 << FP_FBITS);
+    //result = SNS.getPosition();
+    result = PID.step(120 << FP_FBITS);
   // Print the benchmark result
   Serial.print(F("Loop: "));
   Serial.print(1000UL * (millis() - start) / BENCH_COUNT);
@@ -183,9 +184,10 @@ void setup() {
   //delay(5000);
 
   // Configure the PID controller
-  uint8_t snsMaxWht = SNS.chnWht * SNS.chnWht * SNS.chnWht;
+  float snsMaxWht = SNS.chnWht * SNS.chnWht * SNS.chnWht;
   //PID.init(128 / snsMaxWht, 0.04, 0.2);
-  PID.init(2, 0.04, 0.2);
+  //PID.init(2, 0.04, 0.2);
+  PID.initStd(2.5, 0, 0);
 
   while (true) benchmark();
 }

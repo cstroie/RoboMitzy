@@ -12,38 +12,61 @@
 FPID::FPID() {
 }
 
+/**
+  Ideal PID form, using proportional gain, integral gain and derivative gain
+*/
 void FPID::init(float Kp, float Ki, float Kd) {
-  // Convert the gains to Q7.8
-  kp = Kp * (int16_t)FP_ONE;
-  ki = Ki * (int16_t)FP_ONE;
-  kd = Kd * (int16_t)FP_ONE;
+  // Convert the gains to Q23.8
+  kp = Kp * FP_ONE;
+  ki = Ki * FP_ONE;
+  kd = Kd * FP_ONE;
+  // Reset persistent loop variables
+  oldError = 0;
+  oldIntgr = 0;
 }
 
+/**
+  Standard PID form, using proportional gain, integral time and derivative time
+*/
+void FPID::initStd(float Kp, float Ti, float Td) {
+  float Ki;
+  if (Ti == 0) Ki = 0;
+  else         Ki = Kp / Ti;
+  init(Kp, Ki, Kp * Td);
+}
+
+/**
+  Compute the correction (Q7.8) based on error (Q7.8)
+*/
 int16_t FPID::step(int16_t error) {
   uint32_t now = millis();
   if (now > oldTime) {
-    // Compute the sampling time interval (delta t)
+    // Compute the sampling time interval (delta t) Q8.0
     uint16_t dt = (uint16_t)(now - oldTime);
-    // Integral error.time: Q7.8 * Q16 = Q23.8
-    iOut = ki * error;
-    // Derivative on delta-t: Q7.8 * Q16 = Q23.8
-    dOut = kd * (error - oldError);
+    // Integral error Q23.8
+    iOut = error;       // Q7.8
+    // Derivative on delta-t: Q23.8 * Q7.8 = Q31.8
+    dOut = (kd * (error - oldError)) >> FP_FBITS; // Q23.8
     // If fast enough, we can spare a multiplication and division
     if (dt > 1) {
-      iOut = iOut * dt;
-      dOut = dOut / dt;
+      iOut = iOut * dt; // Q23.8
+      dOut = dOut / dt; // Q23.8
     }
-    // Integral sum
-    iOut = constrain(iOut + oldIntgr, MIN24, MAX24);
-    // Proportional Q7.8 * Q16 = Q23.8
-    pOut = kp * error;
+    // Continue to compute the integral
+    iOut += oldIntgr;   // Q23.8
+    // Keep the actual integral
+    oldIntgr = iOut;    // Q23.8
+    iOut = (ki * iOut) >> FP_FBITS;   // Q23.8 !
+    // Constrain the integral
+    iOut = constrain(iOut, MIN32, MAX32);
+    // Proportional Q23.8 * Q15 = Q23.8
+    pOut = (kp * error) >> FP_FBITS;  // Q23.8
     //Serial.println((pOut + iOut + dOut) >> FP_FBITS);
 
     // Keep the partial and final results
-    result = constrain((int16_t)((pOut + iOut + dOut) >> FP_FBITS), MIN24, MAX24);
+    result = constrain((pOut + iOut + dOut) >> FP_FBITS, MIN32, MAX32);
     oldTime = now;
     oldError = error;
-    oldIntgr = iOut;
   }
   // Return the old or new result
   return result;

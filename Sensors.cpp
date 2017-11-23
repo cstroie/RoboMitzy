@@ -124,7 +124,7 @@ bool Sensors::calibrate() {
     // The range should be greater the specified THRESHOLD
     if (chnRng[c] < THRESHOLD) calibrated = false;
     // Get each sensor threshold
-    chnThr[c] = chnMax[c] - (chnRng[c] >> 2);
+    chnThr[c] = chnMin[c] + (chnRng[c] >> 1);
   }
   // Collect data for polarity histogram if readings are valid
   if (calibrated) {
@@ -154,6 +154,9 @@ void Sensors::reset() {
   // Reset the polarity histogram
   for (uint8_t i = 0; i < HST_SIZE; i++)
     polHst[i] = 0;
+  // Reset the line position
+  linePosition = 0;
+  onLine = false;
 }
 
 /**
@@ -179,15 +182,15 @@ bool Sensors::getPolarity() {
 }
 
 /**
-  Compute the position coefficients in Q7.8
+  Compute the position coefficients in Q23.8
 */
 void Sensors::coeff() {
-  int16_t x = FP_ONE;
+  int32_t x = FP_ONE;
   uint8_t chnHalf = CHANNELS >> 1;
   for (uint8_t c = 0; c < chnHalf; c++) {
     chnCff[chnHalf + c]      =  -x;
     chnCff[chnHalf - c - 1]  =   x;
-    x = x * chnWht;
+    x *= chnWht;
   }
   //for (uint8_t c = 0; c < CHANNELS; c++) Serial.println(chnCff[c]);
 }
@@ -206,28 +209,15 @@ bool Sensors::onFloor() {
 }
 
 /**
-  Detect if the robot is on line
-*/
-bool Sensors::onLine() {
-  bool line = false;
-  for (uint8_t c = 0; c < CHANNELS; c++)
-    if (chnVal[c]) {
-      line = true;
-      break;
-    }
-  return line;
-}
-
-/**
-  Get the line position for the PID controller, Q7.8 (530us)
+  Get the line position for the PID controller, Q7.8 (540us)
 */
 int16_t Sensors::getPosition() {
-  int16_t result = 0;
+  int32_t result = 0;
   uint8_t count  = 0;
   // Read the sensors
   readAllChannels();
   // Compute the line position using the digital values and
-  // the channels coefficients, Q7.8
+  // the channels coefficients, Q23.8
   for (uint8_t c = 0; c < CHANNELS; c++)
     if (chnVal[c]) {
       result += chnCff[c];
@@ -235,10 +225,16 @@ int16_t Sensors::getPosition() {
     }
   // Reverse the polarity
   if (not polarity) result = -result;
-  // Get the average Q7.8 / Q8.0 = Q7.8
-  if (count > 0)  result = result / count;  // Average on line
-  else            result = 0;               // Off line!
-  // Return the result
-  return result;
+  // Get the average Q23.8 / Q8.0 = Q15.8
+  if (count > 0) {
+    // On line, compute an average and store it as last line position
+    linePosition = constrain(result / count, MIN16, MAX16);
+    onLine = true;
+  }
+  else
+    // Off line, just set the flag
+    onLine = false;
+  // Return the line position
+  return linePosition;
 }
 
