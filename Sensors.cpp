@@ -1,7 +1,7 @@
 /**
   Sensors.cpp
 
-  Copyright 2017 Costin STROIE <costinstroie@eridu.eu.org>
+  Copyright (c) 2017 Costin STROIE <costinstroie@eridu.eu.org>
 
   This file is part of RoboMitzy.
 */
@@ -228,7 +228,7 @@ int16_t Sensors::getPosition() {
   // Get the average Q23.8 / Q8.0 = Q15.8
   if (count > 0) {
     // On line, compute an average and store it as last line position
-    linePosition = constrain(result / count, MIN16, MAX16);
+    linePosition = constrain(fp_div(result, count), MIN16, MAX16);
     onLine = true;
   }
   else

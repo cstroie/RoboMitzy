@@ -1,7 +1,7 @@
 /**
   Motors.cpp
 
-  Copyright 2017 Costin STROIE <costinstroie@eridu.eu.org>
+  Copyright (c) 2017 Costin STROIE <costinstroie@eridu.eu.org>
 
   This file is part of RoboMitzy.
 */

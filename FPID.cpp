@@ -1,7 +1,7 @@
 /**
   FPID.cpp
 
-  Copyright 2017 Costin STROIE <costinstroie@eridu.eu.org>
+  Copyright (c)g 2017 Costin STROIE <costinstroie@eridu.eu.org>
 
   This file is part of RoboMitzy.
 */
@@ -16,6 +16,10 @@ FPID::FPID() {
   Ideal PID form, using proportional gain, integral gain and derivative gain
 */
 void FPID::init(float Kp, float Ki, float Kd) {
+  // Constraints
+  Kp = constrain(Kp, MIN8, MAX8);
+  Ki = constrain(Ki, MIN8, MAX8);
+  Kd = constrain(Kd, MIN8, MAX8);
   // Convert the gains to Q23.8
   kp = Kp * FP_ONE;
   ki = Ki * FP_ONE;
@@ -42,29 +46,27 @@ int16_t FPID::step(int16_t error) {
   uint32_t now = millis();
   if (now > oldTime) {
     // Compute the sampling time interval (delta t) Q8.0
-    uint16_t dt = (uint16_t)(now - oldTime);
+    uint8_t dt = (uint8_t)(now - oldTime);
     // Integral error Q23.8
     iOut = error;       // Q7.8
     // Derivative on delta-t: Q23.8 * Q7.8 = Q31.8
-    dOut = (kd * (error - oldError)) >> FP_FBITS; // Q23.8
+    dOut = fp_mul(kd, error - oldError); // Q23.8
     // If fast enough, we can spare a multiplication and division
     if (dt > 1) {
-      iOut = iOut * dt; // Q23.8
-      dOut = dOut / dt; // Q23.8
+      iOut = fp_mul(iOut, dt); // Q23.8
+      dOut = fp_div(dOut, dt); // Q23.8
     }
-    // Continue to compute the integral
-    iOut += oldIntgr;   // Q23.8
-    // Keep the actual integral
-    oldIntgr = iOut;    // Q23.8
-    iOut = (ki * iOut) >> FP_FBITS;   // Q23.8 !
+    // Keep the present integral Q23.8
+    oldIntgr = constrain(oldIntgr + iOut, MIN24, MAX24);
+    iOut = fp_mul(ki, oldIntgr);   // Q23.8 !
     // Constrain the integral
     iOut = constrain(iOut, MIN32, MAX32);
-    // Proportional Q23.8 * Q15 = Q23.8
-    pOut = (kp * error) >> FP_FBITS;  // Q23.8
+    // Proportional Q23.8 * Q7.8 = Q31.8
+    pOut = constrain(fp_mul(kp, error), MIN24, MAX24);  // Q23.8
     //Serial.println((pOut + iOut + dOut) >> FP_FBITS);
 
     // Keep the partial and final results
-    result = constrain((pOut + iOut + dOut) >> FP_FBITS, MIN32, MAX32);
+    result = constrain((pOut + iOut + dOut) >> FP_FBITS, MIN16, MAX16);
     oldTime = now;
     oldError = error;
   }

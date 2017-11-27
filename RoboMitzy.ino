@@ -1,7 +1,7 @@
 /**
   RoboMitzy
 
-  Copyright 2017 Costin STROIE <costinstroie@eridu.eu.org>
+  Copyright (c) 2017 Costin STROIE <costinstroie@eridu.eu.org>
 */
 
 //#define DEBUG
@@ -25,7 +25,7 @@ int16_t benchmark() {
   uint32_t start = millis();
   while (count--)
     //result = SNS.getPosition();
-    result = PID.step(120 << FP_FBITS);
+    result = PID.step(8 << FP_FBITS);
   // Print the benchmark result
   Serial.print(F("Loop: "));
   Serial.print(1000UL * (millis() - start) / BENCH_COUNT);
@@ -175,13 +175,13 @@ void setup() {
   }
 #endif
   // If not calibrated, halt
-  //if (not SNS.calibrated) while (true);
+  if (not SNS.calibrated) while (true);
 
   // Force a positive polarity
   SNS.polarity = true;
 
   // Wait a bit
-  //delay(5000);
+  delay(5000);
 
   // Configure the PID controller
   float snsMaxWht = SNS.chnWht * SNS.chnWht * SNS.chnWht;
@@ -189,7 +189,7 @@ void setup() {
   //PID.init(2, 0.04, 0.2);
   PID.initStd(2.5, 0, 0);
 
-  while (true) benchmark();
+  //while (true) benchmark();
 }
 
 /**
