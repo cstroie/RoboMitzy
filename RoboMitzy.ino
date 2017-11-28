@@ -23,9 +23,11 @@ int16_t benchmark() {
   int16_t result;
   uint16_t count = BENCH_COUNT;
   uint32_t start = millis();
-  while (count--)
-    //result = SNS.getPosition();
-    result = PID.step(8 << FP_FBITS);
+  while (count--) {
+    result = SNS.getPosition();
+    result = PID.step(result);
+    M.drive(127, result >> FP_FBITS);
+  }
   // Print the benchmark result
   Serial.print(F("Loop: "));
   Serial.print(1000UL * (millis() - start) / BENCH_COUNT);
@@ -33,6 +35,7 @@ int16_t benchmark() {
   Serial.println(result);
   return result;
 }
+
 
 /**
   Calibrate the sensors
@@ -184,10 +187,10 @@ void setup() {
   delay(5000);
 
   // Configure the PID controller
-  float snsMaxWht = SNS.chnWht * SNS.chnWht * SNS.chnWht;
+  float snsMaxWht = SNS.chnWht * SNS.chnWht;
   //PID.init(128 / snsMaxWht, 0.04, 0.2);
   //PID.init(2, 0.04, 0.2);
-  PID.initStd(2.5, 0, 0);
+  PID.initStd(32, 20, 40);
 
   //while (true) benchmark();
 }
@@ -196,25 +199,25 @@ void setup() {
   Main Arduino loop
 */
 void loop() {
-  // Run at most once per millisecond
+  // Run at most once per millisecond (600us)
   if ((uint8_t)(millis() & 0xFF) != lastRun) {
     // Get the line position
     int16_t pos = SNS.getPosition();
-    // If the robot has been lifted, stop the motors
-    if (SNS.onFloor()) {
+    // If the robot has been lifted or it has lost the line, stop the motors
+    if (SNS.onFloor() and SNS.onLine) {
       // Get the controller correction
-      int16_t stp = PID.step(pos);
+      int16_t cor = PID.step(pos) >> FP_FBITS;
       // Adjust the motors
-      M.drive(127, stp >> 8);
+      M.drive(127, cor);
 
 #ifdef DEBUG
       // Show the results
       for (uint8_t c = 0; c < CHANNELS; c++)
         Serial.print(SNS.chnVal[c]);
       Serial.print(" ");
-      Serial.print(pos >> 8);
+      Serial.print(pos);
       Serial.print(",");
-      Serial.println(stp >> 8);
+      Serial.println(cor);
 #endif
     }
     else
