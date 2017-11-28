@@ -53,7 +53,7 @@ class Sensors {
     uint8_t chnVal[CHANNELS];   // Calibrated channel digital value
 
     // Channel weights: x * 2^n, n=0..3, x<=4.63 for Q7.8
-    float   chnWht = 1.2;
+    float   chnWht = 2;
     int32_t chnCff[CHANNELS];   // Channel coefficients, computed at runtime, Q23.8
 
     bool    polarity = true;    // Surface polarity (black/white, white/black)
@@ -63,7 +63,7 @@ class Sensors {
     uint8_t pinIR;
 
     // Test values
-    uint8_t chnTst[CHANNELS] = {0x40, 0x40, 0, 0, 0, 0, 0, 0};
+    uint8_t chnTst[CHANNELS] = {0, 0, 0, 0, 0xA0, 0, 0 ,0};
 };
 
 #endif /* SENSORS_H */

@@ -228,7 +228,7 @@ int16_t Sensors::getPosition() {
   // Get the average Q23.8 / Q8.0 = Q15.8
   if (count > 0) {
     // On line, compute an average and store it as last line position
-    linePosition = constrain(fp_div(result, count), MIN16, MAX16);
+    linePosition = constrain(result / count, MIN16, MAX16);
     onLine = true;
   }
   else
