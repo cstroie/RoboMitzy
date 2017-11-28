@@ -48,25 +48,26 @@ int16_t FPID::step(int16_t error) {
     // Compute the sampling time interval (delta t) Q8.0
     uint8_t dt = (uint8_t)(now - oldTime);
     // Integral error Q23.8
-    iOut = error;       // Q7.8
+    if (ki) iOut = error;       // Q7.8
     // Derivative on delta-t: Q23.8 * Q7.8 = Q31.8
-    dOut = fp_mul(kd, error - oldError); // Q23.8
+    if (kd) dOut = fp_mul(kd, error - oldError); // Q23.8
     // If fast enough, we can spare a multiplication and division
     if (dt > 1) {
-      iOut = fp_mul(iOut, dt); // Q23.8
-      dOut = fp_div(dOut, dt); // Q23.8
+      if (ki) iOut = fp_mul(iOut, dt); // Q23.8
+      if (kd) dOut = fp_div(dOut, dt); // Q23.8
     }
-    // Keep the present integral Q23.8
-    oldIntgr = constrain(oldIntgr + iOut, MIN24, MAX24);
-    iOut = fp_mul(ki, oldIntgr);   // Q23.8 !
-    // Constrain the integral
-    iOut = constrain(iOut, MIN32, MAX32);
+    if (ki) {
+      // Keep the present integral Q23.8
+      oldIntgr = constrain(oldIntgr + iOut, MIN24, MAX24);
+      iOut = fp_mul(ki, oldIntgr);   // Q23.8 !
+      // Constrain the integral
+      iOut = constrain(iOut, MIN32, MAX32);
+    }
     // Proportional Q23.8 * Q7.8 = Q31.8
     pOut = constrain(fp_mul(kp, error), MIN24, MAX24);  // Q23.8
-    //Serial.println((pOut + iOut + dOut) >> FP_FBITS);
 
-    // Keep the partial and final results
-    result = constrain((pOut + iOut + dOut) >> FP_FBITS, MIN16, MAX16);
+    // Keep the partial and final results, saturated
+    result = constrain(pOut + iOut + dOut, MIN16, MAX16);
     oldTime = now;
     oldError = error;
   }
