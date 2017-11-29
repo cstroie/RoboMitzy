@@ -11,11 +11,13 @@
 #include "Sensors.h"
 #include "FPID.h"
 #include "Motors.h"
+#include "Led.h"
 
 
 Sensors SNS;
 FPID    PID;
 Motors  M;
+Led     LED(13);
 
 uint8_t lastRun;  // The last time the loop ran
 
@@ -145,11 +147,16 @@ void setup() {
   Serial.begin(115200);
   Serial.println(F("RoboMitzy"));
 
+  // Basic led init
+  LED.init(1000, 50);
+  // Quick blink twice
+  LED.wait(2, 250, 4);
+
   // Initialize the analog line sensors
   SNS.init(3);
   // Initialize the motors, setting the minimum and maximum speed
   M.init(0, 40);
-  // Calibrate and validate the sensors for one second,
+  // Calibrate and validate the sensors for a while,
   // repeat four times if not valid
   for (uint8_t c = 1; c <= 4; c++) {
 #ifdef DEBUG
@@ -177,14 +184,16 @@ void setup() {
     Serial.println();
   }
 #endif
-  // If not calibrated, halt
-  if (not SNS.calibrated) while (true);
+  // If not calibrated, halt on slow blinking
+  while (not SNS.calibrated) LED.wait(10, 2000, 50);
+  // Quick blink twice to mark the end of calibration
+  LED.wait(2, 250, 4);
 
   // Force a positive polarity
   SNS.polarity = true;
 
-  // Wait a bit
-  delay(5000);
+  // Wait a bit on one second quick blinking
+  LED.wait(4, 1000, 2);
 
   // Configure the PID controller
   float snsMaxWht = SNS.chnWht * SNS.chnWht;
@@ -193,6 +202,11 @@ void setup() {
   PID.initStd(32, 20, 40);
 
   //while (true) benchmark();
+
+  // One longer blink before run
+  LED.wait(1, 1000, 25);
+  // Fast blinking for when off line/floor
+  LED.init(100, 10);
 }
 
 /**
@@ -220,9 +234,10 @@ void loop() {
       Serial.println(cor);
 #endif
     }
-    else
+    else {
       M.stop();
-
+      LED.blink();
+    }
     /*
       for (uint8_t c = 0; c < CHANNELS; c++) {
         Serial.print(SNS.chnRaw[c]);
